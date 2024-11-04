@@ -101,6 +101,11 @@ const routes = [
     name: 'swiper',
     component: () => import('../views/Swiper.vue'),
   },
+  {
+    path: '/full-calendar-with-tooltip',
+    name: 'full-calendar-with-tooltip',
+    component: () => import('../views/FullCalendarWithTooltip.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

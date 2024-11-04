@@ -18,6 +18,9 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.10",
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/vue3": "^6.1.15",
     "@intlify/unplugin-vue-i18n": "^5.0.0",
     "@vueuse/core": "^11.0.3",
     "axios": "^1.7.4",

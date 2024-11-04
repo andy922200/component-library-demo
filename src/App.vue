@@ -60,6 +60,9 @@ const selectedLanguageModel = computed({
         RecurTimeSelector 週期預約時間選擇器
       </router-link>
       <router-link :to="{ name: 'swiper' }" class="m-2"> Swiper 圖片輪播 </router-link>
+      <router-link :to="{ name: 'full-calendar-with-tooltip' }" class="m-2">
+        FullCalendar 加上 Tooltip
+      </router-link>
     </div>
   </div>
 

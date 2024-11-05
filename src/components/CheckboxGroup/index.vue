@@ -38,6 +38,10 @@ const props = defineProps({
     type: String as PropType<string>,
     default: '',
   },
+  isOriginalChecked: {
+    type: Boolean as PropType<boolean>,
+    default: false,
+  },
 })
 
 const emits = defineEmits<{
@@ -88,17 +92,34 @@ defineOptions({
 <template>
   <div class="checkbox-group__wrapper flex flex-wrap" :class="groupWrapperClass">
     <div class="checkbox-group__father w-full" :class="fatherClass">
-      <BaseCheckbox
-        v-model="fatherOption[0].checked"
-        :bg-color="bgColor"
-        :checked-bg-color="checkedBgColor"
-        :checked-border-color="checkedBorderColor"
-        :default-mark-icon-color="defaultMarkIconColor"
-        :data-value="fatherOption[0].value"
-        @change="fatherOptionChange"
-      >
-        {{ fatherOption[0]?.name }}
-      </BaseCheckbox>
+      <template v-if="props.isOriginalChecked">
+        <div class="base-original-checkbox__wrapper flex">
+          <input
+            :id="fatherOption[0]?.value"
+            v-model="fatherOption[0].checked"
+            type="checkbox"
+            class="mr-2 cursor-pointer rounded p-2 focus:outline-0 focus:ring-0 focus:ring-offset-0"
+            @change="() => fatherOptionChange(fatherOption[0].checked)"
+          />
+          <label :for="fatherOption[0]?.value" class="cursor-pointer">
+            {{ fatherOption[0]?.name }}
+          </label>
+        </div>
+      </template>
+
+      <template v-else>
+        <BaseCheckbox
+          v-model="fatherOption[0].checked"
+          :bg-color="bgColor"
+          :checked-bg-color="checkedBgColor"
+          :checked-border-color="checkedBorderColor"
+          :default-mark-icon-color="defaultMarkIconColor"
+          :data-value="fatherOption[0].value"
+          @change="fatherOptionChange"
+        >
+          {{ fatherOption[0]?.name }}
+        </BaseCheckbox>
+      </template>
     </div>
     <div
       class="checkbox-group__children-area disabled flex w-full flex-wrap"
@@ -110,18 +131,46 @@ defineOptions({
         class="checkbox-group__child"
         :class="childrenClass"
       >
-        <BaseCheckbox
-          v-model="item.checked"
-          :bg-color="bgColor"
-          :checked-bg-color="checkedBgColor"
-          :checked-border-color="checkedBorderColor"
-          :default-mark-icon-color="defaultMarkIconColor"
-          :disabled="!fatherOption[0].checked"
-          :data-value="item.value"
-          @change="childrenOptionChange"
-        >
-          {{ item.name }}
-        </BaseCheckbox>
+        <template v-if="props.isOriginalChecked">
+          <div class="base-original-checkbox__wrapper flex">
+            <input
+              :id="item.id"
+              v-model="item.checked"
+              type="checkbox"
+              class="mr-2 rounded p-2 focus:outline-0 focus:ring-0 focus:ring-offset-0"
+              :class="{
+                'cursor-not-allowed border-[#ddd] bg-[#eee] opacity-60': !fatherOption[0].checked,
+                'cursor-pointer': fatherOption[0].checked,
+              }"
+              :disabled="!fatherOption[0].checked"
+              @change="childrenOptionChange"
+            />
+            <label
+              :for="item.id"
+              :class="{
+                'cursor-not-allowed opacity-60': !fatherOption[0].checked,
+                'cursor-pointer': fatherOption[0].checked,
+              }"
+            >
+              {{ item.name }}
+            </label>
+          </div>
+        </template>
+
+        <template v-else>
+          <BaseCheckbox
+            v-model="item.checked"
+            :bg-color="bgColor"
+            :checked-bg-color="checkedBgColor"
+            :checked-border-color="checkedBorderColor"
+            :default-mark-icon-color="defaultMarkIconColor"
+            :disabled="!fatherOption[0].checked"
+            :data-value="item.value"
+            @change="childrenOptionChange"
+          >
+            {{ item.name }}
+          </BaseCheckbox>
+        </template>
       </div>
     </div>
   </div>

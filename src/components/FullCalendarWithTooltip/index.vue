@@ -14,42 +14,44 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import FullCalendar from '@fullcalendar/vue3'
 import { useWindowSize } from '@vueuse/core'
 import dayjs from 'dayjs'
-import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
 
 import FullCalendarTooltip from './FullCalendarTooltip.vue'
 
+const fullCalendarInstance = ref<typeof FullCalendar | null>(null)
 const { width: windowWidth } = useWindowSize()
-
-const tooltipState = reactive({
-  visible: false,
-  position: {
-    x: 0,
-    y: 0,
-  },
-  content: {
-    title: '',
-    start: null as Date | null,
-    end: null as Date | null,
-    mobile: '',
-    orderNumber: '',
-  } as Record<string, any>,
-})
 
 const props = withDefaults(
   defineProps<{
     currentEvents?: EventInput[] | undefined
     options?: Omit<CalendarOptions, 'locale'>
     defaultLocale?: string
+    tooltipState: {
+      visible: boolean
+      position: {
+        x: number
+        y: number
+      }
+      content?: Record<string, any>
+    }
   }>(),
   {
     currentEvents: undefined,
     defaultLocale: 'en',
     options: () => ({}),
+    tooltipState: () => ({
+      visible: false,
+      position: {
+        x: 0,
+        y: 0,
+      },
+    }),
   },
 )
 
 const emits = defineEmits<{
   'update:currentEvents': [value: EventInput[] | undefined]
+  'update:tooltipState': [value: Record<string, any>]
   'update:handleEventClick': [value: EventClickArg]
   'update:handleDateSelect': [value: { original: DateSelectArg; calendarApi: CalendarApi }]
   'update:handleDatesSet': [value: { info: DatesSetArg; calendarApi: CalendarApi }]
@@ -63,6 +65,13 @@ const internalValue = computed({
   get: () => (isControlled.value ? props.currentEvents : localValue.value),
   set: (value) => {
     isControlled.value ? emits('update:currentEvents', value) : (localValue.value = value)
+  },
+})
+
+const internalTooltipValue = computed({
+  get: () => props.tooltipState,
+  set: (value) => {
+    emits('update:tooltipState', value)
   },
 })
 
@@ -90,7 +99,7 @@ const handleDatesSetTrigger = (info: DatesSetArg) => {
 }
 
 const closeTooltip = () => {
-  tooltipState.visible = false
+  internalTooltipValue.value.visible = false
 }
 
 const addToggleTooltip = ({
@@ -106,15 +115,13 @@ const addToggleTooltip = ({
 
   const toggleTooltip = () => {
     const rect = referenceEl.getBoundingClientRect()
-    const { title, extendedProps, start, end } = eventData || {}
-    tooltipState.content = {
-      title,
-      startDate: dayjs(start).format('YYYY-MM-DD'),
-      endDate: dayjs(end).format('YYYY-MM-DD'),
-      startTime: dayjs(start).format('HH:mm'),
-      endTime: dayjs(end).format('HH:mm'),
+    const { extendedProps, ...cleanedExtendedProps } = eventData?.toPlainObject() || {}
+
+    internalTooltipValue.value.content = {
+      ...cleanedExtendedProps,
       ...extendedProps,
     }
+
     let tooltipX = rect.left + window.scrollX
     let tooltipY = rect.top + window.scrollY - 24
 
@@ -137,9 +144,9 @@ const addToggleTooltip = ({
       tooltipX = screenWidth - tooltipWidth - 16 // 調整到螢幕內，並留一點邊距
     }
 
-    tooltipState.position.x = tooltipX
-    tooltipState.position.y = tooltipY
-    tooltipState.visible = true
+    internalTooltipValue.value.position.x = tooltipX
+    internalTooltipValue.value.position.y = tooltipY
+    internalTooltipValue.value.visible = true
     referenceEl.blur()
   }
 
@@ -152,8 +159,9 @@ const handleEvents = (events: EventApi[]) => {
 
 const calendarOptions = ref<CalendarOptions>({
   plugins: [dayGridPlugin],
-  initialEvents: internalValue.value,
   locales: allLocales,
+  locale: calendarLang.value,
+  aspectRatio: 1.35,
   ...props.options,
   select: handleDateSelect,
   eventClick: handleEventClick,
@@ -165,6 +173,22 @@ const calendarOptions = ref<CalendarOptions>({
 watchEffect(() => {
   calendarOptions.value.locale = calendarLang.value
 })
+
+watch(
+  () => internalValue.value,
+  async (newVal) => {
+    // 當事件變動且獲得的值 > 0時，重新渲染，否則會無限循環
+    if (newVal && newVal.length > 0) {
+      const calendarApi = fullCalendarInstance.value?.getApi()
+
+      // 移除所有事件後，再重新加入
+      if (calendarApi) {
+        calendarApi.removeAllEvents()
+        newVal.forEach((event) => calendarApi.addEvent(event))
+      }
+    }
+  },
+)
 
 watch(
   () => windowWidth.value,
@@ -179,7 +203,7 @@ watch(
 
 <template>
   <div class="full-calendar flex size-full items-center px-2 text-sm">
-    <FullCalendar :options="calendarOptions">
+    <FullCalendar ref="fullCalendarInstance" :options="calendarOptions">
       <template #eventContent="arg">
         <div class="flex w-full items-center px-1">
           <span
@@ -198,23 +222,11 @@ watch(
     </FullCalendar>
 
     <FullCalendarTooltip
-      v-model:visible="tooltipState.visible"
-      :x="tooltipState.position.x"
-      :y="tooltipState.position.y"
+      v-model:visible="internalTooltipValue.visible"
+      :x="internalTooltipValue.position.x"
+      :y="internalTooltipValue.position.y"
     >
-      <div class="mb-2 flex items-center justify-between font-bold">
-        <span>{{ tooltipState.content?.title }}</span>
-        <span class="cursor-pointer text-gray-400 hover:text-gray-600" @click.self="closeTooltip">
-          &times;
-        </span>
-      </div>
-      <div class="mb-2 leading-relaxed">
-        <p>
-          時間：{{ tooltipState.content?.startDate }} {{ tooltipState.content?.startTime }} -
-          {{ tooltipState.content?.endTime }}
-        </p>
-        <p>訂單編號：{{ tooltipState.content?.orderNumber }}</p>
-      </div>
+      <slot name="tooltip-content" />
     </FullCalendarTooltip>
   </div>
 </template>
@@ -228,7 +240,7 @@ watch(
     margin-bottom: 1rem;
     flex-wrap: wrap;
 
-    @media screen and (min-width: 768px) {
+    @media screen and (width >= 768px) {
       flex-wrap: nowrap;
     }
   }
@@ -236,13 +248,14 @@ watch(
   :deep(.fc-toolbar-chunk):nth-child(1) {
     order: 1;
 
-    @media screen and (min-width: 768px) {
+    @media screen and (width >= 768px) {
       width: auto;
     }
   }
 
   :deep(.fc-toolbar-chunk):nth-child(2) {
     order: 2;
+
     div {
       display: flex;
       align-items: center;
@@ -255,7 +268,7 @@ watch(
 
   :deep(.fc-toolbar-chunk):nth-child(3) {
     order: 3;
-    width: 0px;
+    width: 0;
   }
 }
 </style>

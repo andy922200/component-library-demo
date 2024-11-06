@@ -1,113 +1,68 @@
 import { EventInput } from '@fullcalendar/core'
 import dayjs from 'dayjs'
 
-const today = dayjs()
-const firstDayCurrentMonth = today.startOf('month')
-const fifteenthDayCurrentMonth = today.startOf('month').add(14, 'days')
-const lastDayCurrentMonth = today.endOf('month')
-
 interface CustomEventInput extends EventInput {
   [key: string]: any
 }
 
-export const INITIAL_EVENTS: CustomEventInput[] = [
-  {
-    id: '1',
-    title: '板橋鄉民活動中心1',
-    start: firstDayCurrentMonth.format('YYYY-MM-DD HH:mm:ss'),
-    end: firstDayCurrentMonth.add(1, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#27AE60',
-    borderColor: '#27AE60',
-    mobile: '0912345678',
-    orderNumber: 'order#1',
-  },
-  {
-    id: '2',
-    title: '板橋警民活動中心2',
-    start: firstDayCurrentMonth.add(1, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: firstDayCurrentMonth.add(2, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#2',
-  },
-  {
-    id: '3',
-    title: '板橋警民活動中心3',
-    start: firstDayCurrentMonth.add(3, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: firstDayCurrentMonth.add(4, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#3',
-  },
-  {
-    id: '4',
-    title: '板橋警民活動中心4',
-    start: firstDayCurrentMonth.add(6, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: firstDayCurrentMonth.add(7, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#4',
-  },
-  {
-    id: '5-1',
-    title: '板橋警民活動中心5-1',
-    start: today.startOf('month').format('YYYY-MM-DD HH:mm:ss'),
-    end: today.startOf('month').add(1, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#5-1',
-  },
-  {
-    id: '5-2',
-    title: '板橋警民活動中心5-2',
-    start: fifteenthDayCurrentMonth.add(3, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: fifteenthDayCurrentMonth.add(4, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#5-2',
-  },
-  {
-    id: '6',
-    title: '板橋警民活動中心6',
-    start: fifteenthDayCurrentMonth.add(5, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: fifteenthDayCurrentMonth.add(6, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    orderNumber: 'order#6',
-  },
-  {
-    id: '7',
-    title: '板橋警民活動中心7',
-    start: fifteenthDayCurrentMonth.add(6, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: fifteenthDayCurrentMonth.add(7, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#7',
-  },
-  {
-    id: '8',
-    title: '板橋警民活動中心8',
-    start: fifteenthDayCurrentMonth.add(15, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    end: fifteenthDayCurrentMonth.add(16, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#2F80ED',
-    borderColor: '#2F80ED',
-    mobile: '0912345678',
-    orderNumber: 'order#8',
-  },
-  {
-    id: '9',
-    title: '新莊鄉民活動中心9',
-    start: lastDayCurrentMonth.startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-    end: lastDayCurrentMonth.startOf('day').add(1, 'hours').format('YYYY-MM-DD HH:mm:ss'),
-    backgroundColor: '#EB6615',
-    borderColor: '#EB6615',
-    mobile: '0912345678',
-    orderNumber: 'order#9',
-  },
+export const titles = [
+  '板橋鄉民活動中心1',
+  '板橋警民活動中心2',
+  '板橋警民活動中心3',
+  '板橋警民活動中心4',
+  '板橋警民活動中心5-1',
+  '板橋警民活動中心5-2',
+  '板橋警民活動中心6',
+  '板橋警民活動中心7',
+  '板橋警民活動中心8',
+  '新莊鄉民活動中心9',
 ]
+export const colors = ['#27AE60', '#2F80ED', '#EB6615']
+
+export const generateEvents = ({
+  count,
+  startDate,
+  endDate,
+  titles,
+  colors,
+}: {
+  count: number
+  startDate: string
+  endDate: string
+  intervalHours: number
+  titles: string[]
+  colors: string[]
+}): CustomEventInput[] => {
+  const events: CustomEventInput[] = []
+  const startDateDayjs = dayjs(startDate)
+  const endDateDayjs = dayjs(endDate)
+
+  // 計算事件之間的時間間隔（毫秒）
+  const interval = endDateDayjs.diff(startDateDayjs) / count
+
+  for (let i = 0; i < count; i++) {
+    const start = startDateDayjs.add(i * interval * Math.random(), 'milliseconds')
+    const end = start.add(1, 'hour') // 每個事件持續 1 小時
+    const title = titles[i % titles.length]
+    const color = colors[i % colors.length]
+
+    events.push({
+      id: `${i + 1}`,
+      title: title,
+      start: start.format('YYYY-MM-DD HH:mm:ss'),
+      end: end.format('YYYY-MM-DD HH:mm:ss'),
+      customDisplay: {
+        startDate: start.format('YYYY-MM-DD'),
+        endDate: end.format('YYYY-MM-DD'),
+        startTime: start.format('HH:mm'),
+        endTime: end.format('HH:mm'),
+      },
+      backgroundColor: color,
+      borderColor: color,
+      mobile: '0912345678',
+      orderNumber: `order#${i + 1}`,
+    })
+  }
+
+  return events
+}

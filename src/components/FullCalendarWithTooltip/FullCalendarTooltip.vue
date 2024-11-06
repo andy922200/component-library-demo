@@ -23,12 +23,14 @@ onClickOutside(fullCalendarTooltip, () => {
 </script>
 
 <template>
-  <div
-    v-if="internalVisible"
-    ref="fullCalendarTooltip"
-    :style="{ left: `${props.x}px`, top: `${props.y}px` }"
-    class="full-calendar__tooltip absolute z-[10000] w-[280px] rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-800 shadow-lg"
-  >
-    <slot />
-  </div>
+  <Teleport to="body">
+    <div
+      v-if="internalVisible"
+      ref="fullCalendarTooltip"
+      :style="{ left: `${props.x}px`, top: `${props.y}px` }"
+      class="full-calendar__tooltip absolute z-[10000] w-[280px] rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-800 shadow-lg"
+    >
+      <slot />
+    </div>
+  </Teleport>
 </template>

@@ -1,11 +1,32 @@
 <script setup lang="ts">
 import { CalendarApi, DatesSetArg, EventClickArg } from '@fullcalendar/core'
-import { ref } from 'vue'
+import dayjs from 'dayjs'
+import { reactive, ref, watch } from 'vue'
 
-import { INITIAL_EVENTS } from '@/components/FullCalendarWithTooltip/event-demo'
+import { colors, generateEvents, titles } from '@/components/FullCalendarWithTooltip/event-demo'
 import FullCalendarWithTooltip from '@/components/FullCalendarWithTooltip/index.vue'
+const eventCollection = ref()
 
-const eventCollection = ref(INITIAL_EVENTS)
+let tooltipState = reactive({
+  visible: false,
+  position: {
+    x: 0,
+    y: 0,
+  },
+  content: {} as Record<string, any>,
+})
+
+const resetTooltipContent = () => {
+  const contentKeys = Object.keys(tooltipState.content)
+  contentKeys.forEach((key) => {
+    tooltipState.content[key] = ''
+  })
+}
+
+const triggerCloseTooltip = () => {
+  tooltipState.visible = false
+  resetTooltipContent()
+}
 
 const triggerEventClick = (clickInfo: EventClickArg) => {
   console.log('triggerDateSelect', clickInfo)
@@ -18,11 +39,33 @@ const triggerPrevNextToday = async ({
   info: DatesSetArg
   calendarApi: CalendarApi
 }) => {
-  const startTime = info.startStr
-  const endTime = info.endStr
-  console.log('triggerPrevNextToday', info, calendarApi)
-  console.log('startTime', startTime, 'endTime', endTime)
+  const startTime = info.view.currentStart
+  const endTime = info.view.currentEnd
+
+  if (!calendarApi) return
+
+  calendarApi.removeAllEvents()
+
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  eventCollection.value = generateEvents({
+    count: 10,
+    startDate: dayjs(startTime).format('YYYY-MM-DD'),
+    endDate: dayjs(endTime).format('YYYY-MM-DD'),
+    intervalHours: 8,
+    titles,
+    colors,
+  })
 }
+
+watch(
+  () => tooltipState.visible,
+  (newVal) => {
+    if (!newVal) {
+      resetTooltipContent()
+    }
+  },
+)
 </script>
 
 <template>
@@ -31,8 +74,8 @@ const triggerPrevNextToday = async ({
 
     <div class="h-[50rem]">
       <FullCalendarWithTooltip
-        v-model:current-events="eventCollection"
-        default-locale="zh-tw"
+        v-model:tooltip-state="tooltipState"
+        :current-events="eventCollection"
         :options="{
           height: 'calc(100% - 0.5rem)',
           headerToolbar: {
@@ -45,7 +88,27 @@ const triggerPrevNextToday = async ({
         }"
         @update:handle-event-click="triggerEventClick"
         @update:handle-dates-set="triggerPrevNextToday"
-      />
+      >
+        <template #tooltip-content>
+          <div class="mb-2 flex items-center justify-between font-bold">
+            <span>{{ tooltipState.content?.title }}</span>
+            <span
+              class="cursor-pointer text-gray-400 hover:text-gray-600"
+              @click.self="triggerCloseTooltip"
+            >
+              &times;
+            </span>
+          </div>
+          <div class="mb-2 leading-relaxed">
+            <p>
+              時間：{{ tooltipState.content?.customDisplay?.startDate }}
+              {{ tooltipState.content?.customDisplay?.startTime }} -
+              {{ tooltipState.content?.customDisplay?.endTime }}
+            </p>
+            <p>訂單編號：{{ tooltipState.content?.orderNumber }}</p>
+          </div>
+        </template>
+      </FullCalendarWithTooltip>
     </div>
   </div>
 </template>

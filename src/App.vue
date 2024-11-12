@@ -63,6 +63,9 @@ const selectedLanguageModel = computed({
       <router-link :to="{ name: 'full-calendar-with-tooltip' }" class="m-2">
         FullCalendar 加上 Tooltip
       </router-link>
+      <router-link :to="{ name: 'scrollable-date-table' }" class="m-2">
+        Scrollable Table 可滾動的日期顯示表格
+      </router-link>
     </div>
   </div>
 

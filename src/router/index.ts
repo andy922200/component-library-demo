@@ -106,6 +106,11 @@ const routes = [
     name: 'full-calendar-with-tooltip',
     component: () => import('../views/FullCalendarWithTooltip.vue'),
   },
+  {
+    path: '/scrollable-date-table',
+    name: 'scrollable-date-table',
+    component: () => import('../views/ScrollableDateTable.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

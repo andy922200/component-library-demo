@@ -41,6 +41,9 @@ const selectedLanguageModel = computed({
       <router-link :to="{ name: 'checkbox-group' }" class="m-2">
         CheckboxGroup 核取方塊群
       </router-link>
+      <router-link :to="{ name: 'radio-checkbox-group' }" class="m-2">
+        RadioCheckboxGroup 單選按鈕 Checkbox 樣式
+      </router-link>
       <router-link :to="{ name: 'input' }" class="m-2">Input 輸入框</router-link>
       <router-link :to="{ name: 'tooltip' }" class="m-2">Tooltip 工具提示框</router-link>
       <router-link :to="{ name: 'spinner' }" class="m-2">Spinner 讀取圖示</router-link>

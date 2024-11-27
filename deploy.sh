@@ -28,7 +28,25 @@ git add -A
 git commit -m 'deploy'
 
 # push to gh-pages branch
-git push -f https://github.com/andy922200/component-library-demo.git main:gh-pages
+REMOTE_URL="https://github.com/andy922200/component-library-demo.git"
+BRANCHES=("main" "master")
+SUCCESS=0
+
+for BRANCH in "${BRANCHES[@]}"; do
+  echo "Trying to push using branch: $BRANCH"
+  if git push -f "$REMOTE_URL" "$BRANCH:gh-pages"; then
+    echo "Successfully pushed using branch: $BRANCH"
+    SUCCESS=1
+    break
+  else
+    echo "Failed to push using branch: $BRANCH, trying the next one..."
+  fi
+done
+
+if [ $SUCCESS -eq 0 ]; then
+  echo "Error: Failed to push to gh-pages using all available branches."
+  exit 1
+fi
 
 cd -
 

@@ -131,6 +131,6 @@ describe('ScrollableDateTable', () => {
     window.dispatchEvent(new Event('resize'))
 
     await nextTick()
-    expect(headerBorder.style.width).toBe('84px')
+    expect(headerBorder.style.width).toBe('85px')
   })
 })

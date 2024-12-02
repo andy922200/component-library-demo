@@ -38,11 +38,11 @@ const props = withDefaults(
   },
 )
 
+const headerBorderWidthAdjust = 15 // scrollbar 寬度
 const currentYear = dayjs().get('year')
 const headerBorderRef = ref<HTMLDivElement | null>(null)
 const scrollableDateTableRef = ref<HTMLTableElement | null>(null)
 const dynamicTableHeight = ref<string>('')
-
 const daysOfWeekStrDisplayOrder = computed(() => {
   return props.daysOfWeekStrArr
     .slice(props.firstDayOfWeek)
@@ -103,7 +103,7 @@ const syncBorderWidth = () => {
   if (!headerBorderRef.value || !scrollableDateTableRef.value) return
   // 使用 table 的 offsetWidth
   const tableWidth = scrollableDateTableRef.value.offsetWidth
-  headerBorderRef.value.style.width = `${tableWidth - 16}px`
+  headerBorderRef.value.style.width = `${tableWidth - headerBorderWidthAdjust}px`
 }
 
 const applyMaxHeightToCells = () => {
@@ -174,7 +174,7 @@ onUnmounted(() => {
       <!-- Header 下邊線，需浮動以避免被 scroll 內容擋住 -->
       <div
         ref="headerBorderRef"
-        class="scrollable-date-table__header-border sticky left-1 top-9 z-20 h-px w-full"
+        class="scrollable-date-table__header-border sticky left-1.5 top-10 z-20 h-px w-full"
         :class="[props.headerBorderColor]"
       />
 
@@ -189,7 +189,7 @@ onUnmounted(() => {
               :key="day"
               class="scrollable-date-table__header-cell sticky top-0 break-all bg-white text-center align-top"
             >
-              <div class="py-2 min-[375px]:px-2">
+              <div class="py-2 min-[500px]:px-2">
                 {{ day }}
               </div>
             </th>

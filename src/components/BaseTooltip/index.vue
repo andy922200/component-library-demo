@@ -8,7 +8,7 @@ import {
   Placement,
   shift,
 } from '@floating-ui/dom'
-import { nextTick, onMounted, PropType, ref } from 'vue'
+import { computed, nextTick, onMounted, PropType, ref } from 'vue'
 
 import { isMobileAgent } from '@/helpers'
 
@@ -33,15 +33,16 @@ const props = defineProps({
     default: 'right',
   },
   className: {
-    type: Object as PropType<{ triggerItem?: string; floatingDom?: string }>,
+    type: Object as PropType<{
+      triggerItem?: string
+      floatingDom?: string
+      arrowColor?: string
+    }>,
     default: () => ({
       triggerItem: '',
       floatingDom: '',
+      arrowColor: 'bg-white',
     }),
-  },
-  floatingArrowColor: {
-    type: String,
-    default: 'bg-green-300',
   },
 })
 
@@ -49,9 +50,17 @@ const triggerItem = ref()
 const floatingDom = ref()
 const floatingArrow = ref()
 const displayTooltip = ref(false)
+const staticSide = ref('')
 const position = ref({
   x: 0,
   y: 0,
+})
+const arrowBorderClass = computed(() => {
+  if (staticSide.value === 'top') return 'border-l border-t'
+  if (staticSide.value === 'bottom') return 'border-r border-b'
+  if (staticSide.value === 'left') return 'border-l border-b'
+  if (staticSide.value === 'right') return 'border-r border-t'
+  return ''
 })
 
 const middleware = [offset(props.offsetValue), flip(), shift()]
@@ -73,7 +82,7 @@ const setFloating = async () => {
       bottom: 'top',
       left: 'right',
     }
-    const staticSide = staticSideMap[placement.split('-')[0]]
+    staticSide.value = staticSideMap[placement.split('-')[0]]
 
     Object.assign(floatingDom.value.style, {
       left: `${x}px`,
@@ -87,7 +96,7 @@ const setFloating = async () => {
       top: arrowY !== undefined ? `${arrowY}px` : '',
       right: '',
       bottom: '',
-      [staticSide]: '-4px',
+      [staticSide.value]: '-4px',
     })
   })
 }
@@ -101,6 +110,7 @@ const showTooltip = (value: boolean, type: string) => {
   if (isMobileAgent()) {
     if (['mouse-enter'].includes(type)) return
   }
+
   displayTooltip.value = value
 }
 </script>
@@ -129,16 +139,16 @@ const showTooltip = (value: boolean, type: string) => {
         left: `${position.y}px`,
         width: 'max-content',
       }"
-      class="floating-dom absolute left-0 top-0 z-20 w-max rounded p-2"
-      :class="[className.floatingDom, floatingArrowColor]"
+      class="floating-dom absolute left-0 top-0 w-max rounded p-2"
+      :class="[className.floatingDom, className.arrowColor]"
     >
       <slot name="content">
         {{ text.content }}
       </slot>
       <div
         ref="floatingArrow"
-        class="floating-arrow absolute size-2 rotate-45"
-        :class="[floatingArrowColor]"
+        class="floating-arrow border-light-gray absolute size-2 rotate-45"
+        :class="[arrowBorderClass, className.arrowColor]"
       />
     </div>
   </div>

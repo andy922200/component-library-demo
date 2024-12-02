@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { useWindowSize } from '@vueuse/core'
+
 import BaseTooltip from '@/components/BaseTooltip/index.vue'
+
+const { width: windowWidth } = useWindowSize()
 
 defineOptions({
   name: 'DemoTooltip',
@@ -13,9 +17,10 @@ defineOptions({
     <div class="flex items-center justify-center">
       <BaseTooltip
         :offset-value="4"
-        floating-arrow-color="bg-[#eee]"
+        :placement="windowWidth < 768 ? 'top' : 'right'"
         :class-name="{
-          floatingDom: 'border border-light-gray text-[#484848]',
+          floatingDom: 'border border-green-300 text-[#484848]',
+          arrowColor: 'bg-green-300',
         }"
       >
         <template #trigger>

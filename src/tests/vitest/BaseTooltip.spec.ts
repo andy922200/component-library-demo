@@ -20,10 +20,14 @@ describe('BaseTooltip.vue', () => {
         offsetValue: 8,
         text: { triggerArea: 'Trigger Text', content: 'Content Text' },
         placement: 'left',
-        className: { triggerItem: '', floatingDom: '' },
-        floatingArrowColor: 'bg-green-300',
+        className: { triggerItem: '', floatingDom: '', arrowColor: '' },
       },
     })
+  })
+
+  it('tooltip is hidden by default', () => {
+    expect(wrapper.vm.displayTooltip).toBe(false)
+    expect(wrapper.find('.floating-dom').isVisible()).toBe(false)
   })
 
   it('renders trigger text correctly', () => {
@@ -74,14 +78,29 @@ describe('BaseTooltip.vue', () => {
     expect(floatingDom.attributes('style')).toContain('top: 0px')
   })
 
+  it('applies custom className correctly', () => {
+    const customWrapper = mount(BaseTooltip, {
+      props: {
+        className: {
+          triggerItem: 'custom-trigger',
+          floatingDom: 'custom-floating',
+          arrowColor: 'custom-arrow',
+        },
+      },
+    })
+
+    expect(customWrapper.find('.trigger-item').classes()).toContain('custom-trigger')
+    expect(customWrapper.find('.floating-dom').classes()).toContain('custom-floating')
+    expect(customWrapper.find('.floating-arrow').classes()).toContain('custom-arrow')
+  })
+
   it('renders default slot content correctly', () => {
     const wrapperWithSlot = mount(BaseTooltip, {
       props: {
         offsetValue: 8,
         text: { triggerArea: 'Trigger Text', content: 'Content Text' },
         placement: 'right',
-        className: { triggerItem: '', floatingDom: '' },
-        floatingArrowColor: 'bg-green-300',
+        className: { triggerItem: '', floatingDom: '', arrowColor: 'bg-green-300' },
       },
       slots: {
         trigger: '<button class="custom-trigger">Custom Trigger</button>',

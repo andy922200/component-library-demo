@@ -69,12 +69,12 @@ const checkConflicts = async ({
       return slotDate === date.format(dateFormatStr)
     })
 
-    if (selectedRecurTimeItem && usedSlotsForDay.length > 0) {
+    if (selectedRecurTimeItem) {
       if (
         dayjs(
           `${date.format(dateFormatStr)} ${selectedRecurTimeItem.selectedStartTime}`,
           `${dateFormatStr} HH:mm`,
-        ).isBefore(dayjs())
+        ).isBefore(dayjs(), 'minute')
       ) {
         allInPast = true
         break

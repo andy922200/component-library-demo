@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWindowSize } from '@vueuse/core'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import dayjs from '@/plugins/dayjs'
@@ -22,6 +23,8 @@ const props = withDefaults(
     inActiveBgCellColor?: string
     dateFormat?: string
     maxTableHeight?: number
+    activeClickCell?: boolean
+    cellWrapperClass?: string
   }>(),
   {
     startDate: '',
@@ -35,14 +38,21 @@ const props = withDefaults(
     inActiveBgCellColor: 'bg-transparent',
     dateFormat: 'YYYY-MM-DD',
     maxTableHeight: undefined,
+    activeClickCell: false,
+    cellWrapperClass: '',
   },
 )
+
+const emits = defineEmits<{
+  'click-cell': [cell: ScheduleCell]
+}>()
 
 const headerBorderWidthAdjust = 15 // scrollbar 寬度
 const currentYear = dayjs().get('year')
 const headerBorderRef = ref<HTMLDivElement | null>(null)
 const scrollableDateTableRef = ref<HTMLTableElement | null>(null)
 const dynamicTableHeight = ref<string>('')
+const { width: windowWidth } = useWindowSize()
 const daysOfWeekStrDisplayOrder = computed(() => {
   return props.daysOfWeekStrArr
     .slice(props.firstDayOfWeek)
@@ -87,6 +97,8 @@ const generateSchedule = ({
         date: dateStr,
         timeSlots: timeSlots,
         dayjsObj: currentDate,
+        isDisabled:
+          !timeSlots || timeSlots.length === 0 || timeSlots.every((slot) => slot.isDisabled),
       }
 
       // 日期加一天
@@ -106,17 +118,6 @@ const syncBorderWidth = () => {
   headerBorderRef.value.style.width = `${tableWidth - headerBorderWidthAdjust}px`
 }
 
-const applyMaxHeightToCells = () => {
-  const cells = document.querySelectorAll('.scrollable-date-table__cell')
-  if (cells.length === 0) return
-
-  const maxHeight = Math.max(...Array.from(cells).map((cell) => (cell as HTMLElement).offsetHeight))
-
-  cells.forEach((cell) => {
-    ;(cell as HTMLElement).style.height = `${maxHeight}px`
-  })
-}
-
 const setDynamicTableHeight = () => {
   if (!props.maxTableHeight || !scrollableDateTableRef.value) {
     dynamicTableHeight.value = ''
@@ -129,9 +130,13 @@ const setDynamicTableHeight = () => {
       : ''
 }
 
+const handleCellClick = (cell: ScheduleCell) => {
+  if (!cell?.timeSlots?.length || !props.activeClickCell || cell.isDisabled) return
+  emits('click-cell', cell)
+}
+
 watch(schedule, () => {
   nextTick(() => {
-    applyMaxHeightToCells()
     setDynamicTableHeight()
   })
 })
@@ -140,15 +145,24 @@ watch(
   () => props.maxTableHeight,
   () => {
     nextTick(() => {
-      applyMaxHeightToCells()
       setDynamicTableHeight()
     })
   },
 )
 
+watch(
+  () => windowWidth.value,
+  (newVal) => {
+    if (newVal < 768) {
+      nextTick(() => {
+        setDynamicTableHeight()
+      })
+    }
+  },
+)
+
 onMounted(() => {
   nextTick(() => {
-    applyMaxHeightToCells()
     setDynamicTableHeight()
   })
 
@@ -174,7 +188,7 @@ onUnmounted(() => {
       <!-- Header 下邊線，需浮動以避免被 scroll 內容擋住 -->
       <div
         ref="headerBorderRef"
-        class="scrollable-date-table__header-border sticky left-1.5 top-10 z-20 h-px w-full"
+        class="scrollable-date-table__header-border sticky left-1.5 top-9 z-20 h-px w-full"
         :class="[props.headerBorderColor]"
       />
 
@@ -209,14 +223,23 @@ onUnmounted(() => {
               :data-date="cell?.date"
             >
               <div
-                class="scrollable-date-table__div flex h-full flex-col items-center overflow-hidden whitespace-normal p-1 text-center"
+                class="scrollable-date-table__div flex h-full min-h-9 flex-col items-center overflow-hidden whitespace-normal p-1 text-center"
+                :class="[
+                  props.activeClickCell
+                    ? !cell || cell?.isDisabled
+                      ? 'cursor-not-allowed'
+                      : 'cursor-pointer'
+                    : '',
+                ]"
+                @click="handleCellClick(cell)"
               >
                 <div
-                  class="size-full break-all rounded p-0.5 md:p-2 xl:p-4"
+                  class="size-full min-h-9 break-all rounded p-0.5 md:p-2 xl:p-4"
                   :class="[
                     cell?.timeSlots?.length > 0
                       ? props.activeBgCellColor
                       : `border border-dashed ${props.inActiveBgCellColor}`,
+                    props.cellWrapperClass,
                   ]"
                 >
                   <div

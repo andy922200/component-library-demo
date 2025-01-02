@@ -1,27 +1,32 @@
 <script setup lang="ts">
 import ScrollableDateTable from '@/components/ScrollableDateTable/index.vue'
+import { ScheduleCell } from '@/components/ScrollableDateTable/type'
 
 const timeSlotDateMap = {
   '2024/11/08': [
-    { startTime: '08:00', endTime: '08:30' },
-    { startTime: '18:00', endTime: '19:00' },
+    { startTime: '08:00', endTime: '08:30', isDisabled: true },
+    { startTime: '18:00', endTime: '19:00', isDisabled: true },
   ],
   '2024/11/14': [
-    { startTime: '08:00', endTime: '08:30' },
-    { startTime: '15:00', endTime: '16:00' },
-    { startTime: '16:00', endTime: '16:30' },
-    { startTime: '18:00', endTime: '19:00' },
+    { startTime: '08:00', endTime: '08:30', isDisabled: true },
+    { startTime: '15:00', endTime: '16:00', isDisabled: true },
+    { startTime: '16:00', endTime: '16:30', isDisabled: true },
+    { startTime: '18:00', endTime: '19:00', isDisabled: true },
   ],
-  '2024/11/22': [
-    { startTime: '08:00', endTime: '08:30' },
-    { startTime: '15:00', endTime: '16:00' },
-    { startTime: '19:00', endTime: '20:00' },
+  '2025/01/17': [
+    { startTime: '08:00', endTime: '08:30', isDisabled: false },
+    { startTime: '15:00', endTime: '16:00', isDisabled: false },
+    { startTime: '19:00', endTime: '20:00', isDisabled: false },
   ],
   '2025/01/22': [
-    { startTime: '08:00', endTime: '08:30' },
-    { startTime: '15:00', endTime: '16:00' },
-    { startTime: '16:00', endTime: '16:30' },
+    { startTime: '08:00', endTime: '08:30', isDisabled: false },
+    { startTime: '15:00', endTime: '16:00', isDisabled: false },
+    { startTime: '16:00', endTime: '16:30', isDisabled: false },
   ],
+}
+
+const handleCellClick = (cell: ScheduleCell) => {
+  console.log(cell)
 }
 
 defineOptions({
@@ -38,19 +43,30 @@ defineOptions({
       :first-day-of-week="0"
       :max-table-height="400"
       date-format="YYYY/MM/DD"
+      :active-click-cell="true"
+      @click-cell="handleCellClick"
     >
       <template #date="{ dayjsObj, currentYear }">
-        <span class="custom-date">
-          {{
-            dayjsObj.get('year') === currentYear
-              ? dayjsObj.format('MM/DD')
-              : dayjsObj.format('YYYY/MM/DD')
-          }}
-        </span>
+        <div class="w-full">
+          <span
+            class="custom-full-date-year w-full md:w-auto"
+            :class="[dayjsObj.get('year') === currentYear ? 'hidden' : 'inline-block']"
+          >
+            {{ dayjsObj.get('year') === currentYear ? '' : dayjsObj.format('YYYY') }}
+          </span>
+          <span
+            class="hidden"
+            :class="[dayjsObj.get('year') === currentYear ? '' : 'md:inline-block']"
+            >/</span
+          >
+          <span>{{ dayjsObj.format('MM/DD') }}</span>
+        </div>
       </template>
 
       <template #timeSlot="{ date, startTime, endTime }">
-        {{ date === '2024/11/08' ? 'Hoo~' : '' }} {{ startTime }} - {{ endTime }}
+        <span class="hidden md:inline-block">
+          {{ date === '2024/11/08' ? 'Hoo~' : '' }} {{ startTime }} - {{ endTime }}
+        </span>
       </template>
     </ScrollableDateTable>
   </div>

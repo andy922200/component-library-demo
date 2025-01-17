@@ -116,6 +116,11 @@ const routes = [
     name: 'scrollable-date-table',
     component: () => import('../views/ScrollableDateTable.vue'),
   },
+  {
+    path: '/textarea',
+    name: 'textarea',
+    component: () => import('../views/Textarea.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

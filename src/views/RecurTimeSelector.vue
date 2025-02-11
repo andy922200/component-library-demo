@@ -24,7 +24,7 @@ const usedTimeSlots = ref<TimeSlotFromAPI[]>([])
 const fetchUsedTimeSlots = async () => {
   await new Promise((r) => setTimeout(r, 500))
 
-  const result = []
+  const result: { date: string; start: string; end: string; type: string }[] = []
 
   const addTimeRange = (dayjsDate: Dayjs) => {
     const existingRanges = result.filter(
@@ -115,7 +115,7 @@ const triggerSendForm = async () => {
     return alert('開始日期不可早於今天')
   }
 
-  const { allInPast, conflictList } = await checkConflicts({
+  const { hasSelectionExpired, conflictList } = await checkConflicts({
     selectedStartDate: selectedStartDate.value,
     selectedEndDate: selectedEndDate.value,
     selectedRecurTimeResult: selectedRecurTimeResult.value,
@@ -123,7 +123,7 @@ const triggerSendForm = async () => {
     dateFormatStr,
   })
 
-  if (allInPast) {
+  if (hasSelectionExpired) {
     errorMsg.value = '開始時間有包含過去的時間段'
     hasCheckedConflict.value = true
     return

@@ -9,15 +9,27 @@ interface RecurTimeOption {
   disabled?: boolean
 }
 
+interface ExpiredItem extends RecurTimeSelectorEmitItem {
+  date: string
+}
+
+interface ValidItem {
+  date: string
+  selectedStartTime: string
+  selectedEndTime: string
+  text: string
+  weekday: string
+}
+
 interface ConflictItem {
-  conflictDate: string
-  usedSlot: TimeSlotFromAPI[]
-  conflictSlot: TimeSlotFromAPI[]
   isValid: boolean
   selectedStartTime: string
   selectedEndTime: string
   text: string
   weekday: string
+  conflictDate: string
+  usedSlot: TimeSlotFromAPI[]
+  conflictSlot: TimeSlotFromAPI[]
   startOptions: RecurTimeOption[]
   endOptions: RecurTimeOption[]
   endOptionsRaw: { [key: string]: RecurTimeOption[] }
@@ -40,8 +52,24 @@ const checkConflicts = async ({
 }) => {
   const selectedStartDateDayjs = dayjs(selectedStartDate, dateFormatStr)
   const selectedEndDateDayjs = dayjs(selectedEndDate, dateFormatStr)
+  const today = dayjs().startOf('day')
+  const validList: ValidItem[] = []
   const conflictList: ConflictItem[] = []
-  let allInPast = false
+  const expiredList: ExpiredItem[] = []
+  let hasSelectionExpired = false
+
+  // 建立已預約時間段的快取表
+  const usedTimeSlotsMap: Record<string, TimeSlotFromAPI[]> = usedTimeSlots.reduce(
+    (map, slot) => {
+      const slotDate = dayjs(slot.date).format(dateFormatStr)
+      if (!map[slotDate]) {
+        map[slotDate] = []
+      }
+      map[slotDate].push(slot)
+      return map
+    },
+    {} as Record<string, TimeSlotFromAPI[]>,
+  )
 
   for (
     let date = selectedStartDateDayjs;
@@ -49,77 +77,93 @@ const checkConflicts = async ({
     date = date.add(1, 'day')
   ) {
     const currentWeekday = date.day() // 0: Sunday, 1: Monday, ..., 6: Saturday
-    const today = dayjs().startOf('day')
+    const currentFormattedDate = date.format(dateFormatStr)
 
-    // 挑出與當前 weekday 相同的已選取時間段
+    // 找到當前日期對應的星期幾是否有被選取
     const selectedRecurTimeItem = selectedRecurTimeResult.find(
       (booking) => parseInt(booking.weekday) === currentWeekday,
     )
 
-    // 篩選出與當前日期相同的已預約時間段
-    const usedSlotsForDay = usedTimeSlots.filter((usedSlot) => {
-      const slotDate = dayjs(usedSlot.date).format(dateFormatStr)
-      // 如果日期是今天，檢查時間段是否已經過去
-      if (date.isSame(today)) {
-        const slotEndTime = dayjs(`${usedSlot.date} ${usedSlot.endTime}`, `${dateFormatStr} HH:mm`)
-        if (slotEndTime.isBefore(dayjs())) {
-          return false // 跳過已經過去的時間段
-        }
+    if (!selectedRecurTimeItem) continue
+
+    // 如果選取時間已過去，跳過該日期
+    const startTime = dayjs(
+      `${currentFormattedDate} ${selectedRecurTimeItem.selectedStartTime}`,
+      `${dateFormatStr} HH:mm`,
+    )
+    if (startTime.isBefore(dayjs(), 'minute')) {
+      hasSelectionExpired = true
+      const result = {
+        ...selectedRecurTimeItem,
+        date: currentFormattedDate,
       }
-      return slotDate === date.format(dateFormatStr)
+      expiredList.push(result)
+      continue
+    }
+
+    // 抓出當前日期相關的已預約時間段
+    let usedSlotsForDay = usedTimeSlotsMap[currentFormattedDate] || []
+
+    // 若當前日期為今天，則過濾掉已經過去的時間段
+    if (date.isSame(today)) {
+      const currentTime = dayjs()
+      usedSlotsForDay = usedSlotsForDay.filter((usedSlot) => {
+        const slotEndTime = dayjs(`${usedSlot.date} ${usedSlot.endTime}`, `${dateFormatStr} HH:mm`)
+        return slotEndTime.isSameOrAfter(currentTime)
+      })
+    }
+
+    let isConflictItem = false
+    const itemTemplate = {
+      selectedStartTime: selectedRecurTimeItem.selectedStartTime,
+      selectedEndTime: selectedRecurTimeItem.selectedEndTime,
+      text: selectedRecurTimeItem.text,
+      weekday: selectedRecurTimeItem.weekday,
+      isValid: selectedRecurTimeItem.isValid,
+    }
+    const validItem: ValidItem = {
+      ...itemTemplate,
+      date: currentFormattedDate,
+    }
+    const conflictItem: ConflictItem = {
+      ...itemTemplate,
+      conflictDate: currentFormattedDate,
+      usedSlot: usedSlotsForDay,
+      conflictSlot: [],
+      startOptions: [],
+      endOptions: [],
+      endOptionsRaw: {},
+      finalSelectedStartTime: '',
+      finalSelectedEndTime: '',
+    }
+
+    // 檢查已選取的時間段是否與已預約的時間段有衝突
+    usedSlotsForDay.forEach((usedSlot) => {
+      if (
+        isInTimeSlotStrict({
+          startTime: selectedRecurTimeItem.selectedStartTime,
+          endTime: selectedRecurTimeItem.selectedEndTime,
+          date: date.format(dateFormatStr),
+          slotStart: usedSlot.startTime,
+          slotEnd: usedSlot.endTime,
+          slotDate: usedSlot.date,
+        })
+      ) {
+        isConflictItem = true
+        conflictItem.conflictSlot?.push(usedSlot)
+      }
     })
 
-    if (selectedRecurTimeItem) {
-      if (
-        dayjs(
-          `${date.format(dateFormatStr)} ${selectedRecurTimeItem.selectedStartTime}`,
-          `${dateFormatStr} HH:mm`,
-        ).isBefore(dayjs(), 'minute')
-      ) {
-        allInPast = true
-        break
-      }
-
-      // 先行建立一筆可能的衝突記錄物件
-      const newConflict: ConflictItem = {
-        ...selectedRecurTimeItem,
-        conflictDate: date.format(dateFormatStr),
-        usedSlot: usedSlotsForDay,
-        conflictSlot: [],
-        startOptions: [],
-        endOptions: [],
-        endOptionsRaw: {},
-        finalSelectedStartTime: '',
-        finalSelectedEndTime: '',
-      }
-
-      // 檢查已選取的時間段是否與已預約的時間段有衝突
-      usedSlotsForDay.forEach((usedSlot) => {
-        if (
-          isInTimeSlotStrict({
-            startTime: selectedRecurTimeItem.selectedStartTime,
-            endTime: selectedRecurTimeItem.selectedEndTime,
-            date: date.format(dateFormatStr),
-            slotStart: usedSlot.startTime,
-            slotEnd: usedSlot.endTime,
-            slotDate: usedSlot.date,
-          })
-        ) {
-          newConflict.conflictSlot.push(usedSlot)
-        }
-      })
-
-      // 如果有衝突才將新記錄添加到衝突列表中
-      if (newConflict.conflictSlot.length > 0) {
-        conflictList.push(newConflict)
-      }
-    }
+    // 如有衝突，將新記錄添加到衝突列表，否則添加到有效列表
+    isConflictItem ? conflictList.push(conflictItem) : validList.push(validItem)
   }
 
   return {
     hasConflict: conflictList.length > 0,
+    hasSelectionExpired,
     conflictList,
-    allInPast,
+    expiredList,
+    validList,
   }
 }
 

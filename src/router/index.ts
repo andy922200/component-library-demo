@@ -121,6 +121,11 @@ const routes = [
     name: 'textarea',
     component: () => import('../views/Textarea.vue'),
   },
+  {
+    path: '/button-group',
+    name: 'button-group',
+    component: () => import('../views/ButtonGroup.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

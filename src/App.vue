@@ -70,6 +70,7 @@ const selectedLanguageModel = computed({
         Scrollable Table 可滾動的日期顯示表格
       </router-link>
       <router-link :to="{ name: 'textarea' }" class="m-2"> Textarea 多行文字輸入 </router-link>
+      <router-link :to="{ name: 'button-group' }" class="m-2"> ButtonGroup 按鈕組 </router-link>
     </div>
   </div>
 

@@ -44,6 +44,7 @@ const emits = defineEmits(['update:value'])
 const isBaseSwitchOn = computed({
   get: () => props.value,
   set: (value) => {
+    if (props.disabled) return
     emits('update:value', value)
   },
 })

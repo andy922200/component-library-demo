@@ -126,6 +126,11 @@ const routes = [
     name: 'button-group',
     component: () => import('../views/ButtonGroup.vue'),
   },
+  {
+    path: '/image-upload',
+    name: 'image-upload',
+    component: () => import('../views/ImageUpload.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

@@ -131,6 +131,11 @@ const routes = [
     name: 'image-upload',
     component: () => import('../views/ImageUpload.vue'),
   },
+  {
+    path: '/color-picker',
+    name: 'color-picker',
+    component: () => import('../views/ColorPicker.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

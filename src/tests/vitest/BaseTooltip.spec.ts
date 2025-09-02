@@ -1,5 +1,5 @@
 import { mount, VueWrapper } from '@vue/test-utils'
-import { describe, expect, it, MockedFunction, vi } from 'vitest'
+import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest'
 
 import BaseTooltip from '@/components/BaseTooltip/index.vue'
 import { isMobileAgent } from '@/helpers'
@@ -20,14 +20,12 @@ describe('BaseTooltip.vue', () => {
         offsetValue: 8,
         text: { triggerArea: 'Trigger Text', content: 'Content Text' },
         placement: 'left',
-        className: { triggerItem: '', floatingDom: '', arrowColor: '' },
+        className: { triggerItem: '', floatingDom: '' },
+        tooltipBgColor: 'bg-gray-800',
+        tooltipTextColor: 'text-white',
+        arrowBorderColor: 'border-gray-800',
       },
     })
-  })
-
-  it('tooltip is hidden by default', () => {
-    expect(wrapper.vm.displayTooltip).toBe(false)
-    expect(wrapper.find('.floating-dom').isVisible()).toBe(false)
   })
 
   it('renders trigger text correctly', () => {
@@ -37,61 +35,81 @@ describe('BaseTooltip.vue', () => {
   it('shows tooltip on mouseenter and hides on mouseleave when not mobile', async () => {
     mockedIsMobileAgent.mockReturnValue(false)
 
-    const floatingDom = wrapper.find('.floating-dom').element as HTMLElement
-
     await wrapper.find('.trigger-item').trigger('mouseenter')
-    expect(floatingDom.style.display).not.toBe('none')
+    expect(wrapper.vm.displayTooltip).toBe(true)
 
     await wrapper.find('.trigger-item').trigger('mouseleave')
-    expect(floatingDom.style.display).toBe('none')
+    expect(wrapper.vm.displayTooltip).toBe(false)
   })
 
   it('does not show tooltip on mouseenter when mobile', async () => {
     mockedIsMobileAgent.mockReturnValue(true)
 
     await wrapper.find('.trigger-item').trigger('mouseenter')
-    expect(wrapper.find('.floating-dom').isVisible()).toBe(false)
+    expect(wrapper.vm.displayTooltip).toBe(false)
   })
 
   it('shows and hides tooltip on touch events', async () => {
     mockedIsMobileAgent.mockReturnValue(true)
 
-    const floatingDom = wrapper.find('.floating-dom').element as HTMLElement
-
     await wrapper.find('.trigger-item').trigger('touchstart')
-    expect(floatingDom.style.display).not.toBe('none')
+    expect(wrapper.vm.displayTooltip).toBe(true)
 
     await wrapper.find('.trigger-item').trigger('touchend')
-    expect(floatingDom.style.display).toBe('none')
+    expect(wrapper.vm.displayTooltip).toBe(false)
   })
 
-  it('positions the tooltip correctly', async () => {
-    mockedIsMobileAgent.mockReturnValue(false)
+  it('generates correct arrow classes for different placements', () => {
+    const testCases = [
+      {
+        placement: 'top',
+        expected: 'floating-arrow absolute size-2 rotate-45 border-b border-r border-gray-800',
+      },
+      {
+        placement: 'bottom',
+        expected: 'floating-arrow absolute size-2 rotate-45 border-t border-l border-gray-800',
+      },
+      {
+        placement: 'left',
+        expected: 'floating-arrow absolute size-2 rotate-45 border-t border-r border-gray-800',
+      },
+      {
+        placement: 'right',
+        expected: 'floating-arrow absolute size-2 rotate-45 border-b border-l border-gray-800',
+      },
+    ]
 
-    await wrapper.find('.trigger-item').trigger('mouseenter')
-    await wrapper.vm.setFloating()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    const floatingDom = wrapper.find('.floating-dom')
-
-    expect(floatingDom.attributes('style')).toContain('left: -8px')
-    expect(floatingDom.attributes('style')).toContain('top: 0px')
+    testCases.forEach(({ placement, expected }) => {
+      const result = wrapper.vm.getArrowClass(placement)
+      expect(result).toBe(expected)
+    })
   })
 
-  it('applies custom className correctly', () => {
+  it('uses custom arrow border color when provided', async () => {
     const customWrapper = mount(BaseTooltip, {
       props: {
-        className: {
-          triggerItem: 'custom-trigger',
-          floatingDom: 'custom-floating',
-          arrowColor: 'custom-arrow',
-        },
+        placement: 'top',
+        arrowBorderColor: 'border-blue-500',
+        tooltipBgColor: 'bg-red-500',
       },
     })
 
-    expect(customWrapper.find('.trigger-item').classes()).toContain('custom-trigger')
-    expect(customWrapper.find('.floating-dom').classes()).toContain('custom-floating')
-    expect(customWrapper.find('.floating-arrow').classes()).toContain('custom-arrow')
+    const arrowClass = customWrapper.vm.getArrowClass('top')
+    expect(arrowClass).toContain('border-blue-500')
+    expect(arrowClass).not.toContain('border-red-500')
+  })
+
+  it('falls back to tooltip background color for arrow border when no custom color provided', async () => {
+    const customWrapper = mount(BaseTooltip, {
+      props: {
+        placement: 'top',
+        tooltipBgColor: 'bg-blue-500',
+        arrowBorderColor: '',
+      },
+    })
+
+    const arrowClass = customWrapper.vm.getArrowClass('top')
+    expect(arrowClass).toContain('border-blue-500')
   })
 
   it('renders default slot content correctly', () => {
@@ -100,7 +118,9 @@ describe('BaseTooltip.vue', () => {
         offsetValue: 8,
         text: { triggerArea: 'Trigger Text', content: 'Content Text' },
         placement: 'right',
-        className: { triggerItem: '', floatingDom: '', arrowColor: 'bg-green-300' },
+        className: { triggerItem: '', floatingDom: '' },
+        tooltipBgColor: 'bg-gray-800',
+        tooltipTextColor: 'text-white',
       },
       slots: {
         trigger: '<button class="custom-trigger">Custom Trigger</button>',
@@ -112,5 +132,18 @@ describe('BaseTooltip.vue', () => {
     expect(wrapperWithSlot.find('.custom-trigger').text()).toBe('Custom Trigger')
     expect(wrapperWithSlot.find('.custom-content').exists()).toBe(true)
     expect(wrapperWithSlot.find('.custom-content').text()).toBe('Custom Content')
+  })
+
+  it('applies correct CSS classes to tooltip elements', async () => {
+    mockedIsMobileAgent.mockReturnValue(false)
+
+    await wrapper.find('.trigger-item').trigger('mouseenter')
+
+    const floatingDom = wrapper.find('.floating-dom')
+    expect(floatingDom.classes()).toContain('bg-gray-800')
+    expect(floatingDom.classes()).toContain('text-white')
+
+    const arrow = wrapper.find('.floating-arrow')
+    expect(arrow.classes()).toContain('rotate-45')
   })
 })

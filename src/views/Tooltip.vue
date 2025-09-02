@@ -18,9 +18,11 @@ defineOptions({
       <BaseTooltip
         :offset-value="4"
         :placement="windowWidth < 768 ? 'top' : 'right'"
+        tooltip-bg-color="bg-white"
+        tooltip-text-color="text-gray-800"
+        arrow-border-color="border-light-gray"
         :class-name="{
-          floatingDom: 'border border-green-300 text-[#484848]',
-          arrowColor: 'bg-green-300',
+          floatingDom: 'border',
         }"
       >
         <template #trigger>

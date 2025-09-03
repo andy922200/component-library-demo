@@ -136,6 +136,11 @@ const routes = [
     name: 'color-picker',
     component: () => import('../views/ColorPicker.vue'),
   },
+  {
+    path: '/payment-strategies',
+    name: 'payment-strategies',
+    component: () => import('../views/PaymentStrategies.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

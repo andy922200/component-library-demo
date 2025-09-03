@@ -73,6 +73,9 @@ const selectedLanguageModel = computed({
       <router-link :to="{ name: 'button-group' }" class="m-2"> ButtonGroup 按鈕組 </router-link>
       <router-link :to="{ name: 'image-upload' }" class="m-2"> Image Upload 圖片上傳 </router-link>
       <router-link :to="{ name: 'color-picker' }" class="m-2"> Color Picker 顏色挑選 </router-link>
+      <router-link :to="{ name: 'payment-strategies' }" class="m-2">
+        Payment Strategies 付款方式
+      </router-link>
     </div>
   </div>
 

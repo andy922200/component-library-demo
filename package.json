@@ -26,6 +26,7 @@
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/vue3": "^6.1.15",
     "@intlify/unplugin-vue-i18n": "^6.0.8",
+    "@line/liff": "^2.27.2",
     "@vueuse/core": "^13.3.0",
     "axios": "^1.7.4",
     "dayjs": "^1.10.7",

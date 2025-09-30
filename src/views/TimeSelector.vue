@@ -1,41 +1,60 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
-import {
-  checkOverlaps,
-  EndTimeOption,
-  generateTimeSlots,
-  getEndTimeOptions,
-  getStartTimeOptions,
-  StartTimeOption,
-  TimeSlot,
-  TimeSlotFromAPI,
-} from '@/helpers/time-selector'
+import { useTimeSelector } from '@/composables/useTimeSelector'
+import type { TimeSlotFromAPI } from '@/composables/useTimeSelector/type'
 import dayjs from '@/plugins/dayjs'
 
 defineOptions({
   name: 'DemoTimeSelector',
 })
 
+// 常數和初始化
 const dateFormatStr = 'YYYY-MM-DD'
 const todayDayjs = dayjs()
 const yesterdayDayjs = todayDayjs.subtract(1, 'day')
 const tomorrowDayjs = todayDayjs.add(1, 'day')
-const selectedDate = ref(todayDayjs.format(dateFormatStr))
-const selectedStartTime = ref('')
-const selectedEndObj = ref<EndTimeOption | null>(null)
-const selectedEndDateTime = ref('')
-const timeSlots = ref<TimeSlot[]>([])
-const startTimeOptions = ref<StartTimeOption[]>([])
-const endTimeOptions = ref<EndTimeOption[]>([])
-const maxUsageHours = ref(24)
-const minUsageHours = ref(0.5)
-const timeSector = ref(30)
-const generateCrossDay = ref(true)
-const isNowActive = ref(true)
+const selectedDateRef = ref(todayDayjs.format(dateFormatStr))
+const selectedStartTimeRef = ref('')
+const selectedEndDateTimeRef = ref('')
 
-const usedTimeSlots = ref<TimeSlotFromAPI[]>([])
+const {
+  usedTimeSlots,
+  selectedEndObj,
+  timeSector,
+  maxUsageHours,
+  minUsageHours,
+  generateCrossDay,
+  isNowActive,
+  startTimeOptions,
+  endTimeOptions,
+  updateUsedTimeSlots,
+  resetStartTime,
+  resetEndTime,
+} = useTimeSelector([], {
+  timeSector: 30,
+  maxUsageHours: 24,
+  minUsageHours: 0.5,
+  generateCrossDay: true,
+  isNowActive: true,
+  externalRefs: {
+    selectedDate: selectedDateRef,
+    selectedStartTime: selectedStartTimeRef,
+    selectedEndDateTime: selectedEndDateTimeRef,
+  },
+  defaultOptions: {
+    startTime: {
+      label: 'please-select-start-time',
+      value: '',
+    },
+    endTime: {
+      label: 'please-select-end-time',
+      value: '',
+    },
+  },
+})
 
+// 選項配置
 const maxUsageHoursOptions = Array.from({ length: 24 }, (_, i) => i + 1)
 const minUsageHoursOptions = computed(() => {
   const maxHours = 1
@@ -46,7 +65,8 @@ const minUsageHoursOptions = computed(() => {
 })
 const timeSectorOptions = [15, 30, 60]
 
-const fetchUsedTimeSlots = async () => {
+// 模擬 API 請求
+const fetchUsedTimeSlots = async (): Promise<TimeSlotFromAPI[]> => {
   await new Promise((r) => setTimeout(r, 500))
   return [
     { startTime: '21:00', endTime: '22:30', date: yesterdayDayjs.format(dateFormatStr) },
@@ -57,136 +77,63 @@ const fetchUsedTimeSlots = async () => {
   ]
 }
 
+// 載入初始資料
 onMounted(async () => {
-  const mockUsedTimeSlots = await fetchUsedTimeSlots()
+  // 設定初始日期
+  selectedDateRef.value = todayDayjs.format(dateFormatStr)
 
-  usedTimeSlots.value = mockUsedTimeSlots
-  handleDateChange()
+  // 載入已佔用的時間段
+  const mockUsedTimeSlots = await fetchUsedTimeSlots()
+  updateUsedTimeSlots({
+    newUsedTimeSlots: mockUsedTimeSlots,
+  })
 })
 
-const resetAllSelector = () => {
-  resetTimeSlots()
-  resetStartTimeArea()
-  resetEndTimeArea()
-}
-
-const resetTimeSlots = () => {
-  timeSlots.value = []
-}
-
-const resetStartTimeArea = () => {
-  startTimeOptions.value = []
-  selectedStartTime.value = ''
-}
-
-const resetEndTimeArea = () => {
-  endTimeOptions.value = []
-  selectedEndObj.value = null
-  selectedEndDateTime.value = ''
-}
-
-const getNewTimeSlots = () => {
-  timeSlots.value = generateTimeSlots({
-    targetDate: selectedDate.value,
-    timeSector: timeSector.value,
-    dateFormat: dateFormatStr,
-  })
-
-  checkOverlaps({
-    timeSlots: timeSlots.value,
-    usedTimeSlots: usedTimeSlots.value,
-    targetDate: selectedDate.value,
-    dateFormat: dateFormatStr,
-  })
-}
-
-const generateStartTimeOptions = () => {
-  const result = getStartTimeOptions({
-    allTimeSlots: timeSlots.value,
-    targetDate: selectedDate.value,
-    usedTimeSlots: usedTimeSlots.value,
-    isNowActive: isNowActive.value,
-    timeSector: timeSector.value,
-    dateFormat: dateFormatStr,
-  })
-
-  startTimeOptions.value = result
-}
-
-const generateEndTimeOptions = () => {
-  const result = getEndTimeOptions({
-    startTime: selectedStartTime.value,
-    allTimeSlots: timeSlots.value,
-    targetDate: selectedDate.value,
-    usedTimeSlots: usedTimeSlots.value,
-    maxUsageHours: maxUsageHours.value,
-    minUsageHours: minUsageHours.value,
-    timeSector: timeSector.value,
-    generateCrossDay: generateCrossDay.value,
-    dateFormat: dateFormatStr,
-  })
-  endTimeOptions.value = result
-}
-
-const handleDateChange = () => {
-  resetAllSelector()
-  getNewTimeSlots()
-  generateStartTimeOptions()
-}
-
-const handleStartTimeChange = () => {
-  resetEndTimeArea()
-  generateEndTimeOptions()
-}
-
-const handleEndTimeChange = () => {
-  if (!selectedEndObj.value) return
-
-  const [time, nextDayStr] = selectedEndObj.value.label.split('_')
-
-  selectedEndDateTime.value =
-    nextDayStr === 'next-day'
-      ? `${dayjs(selectedDate.value).add(1, 'day').format(dateFormatStr)} ${time}`
-      : `${selectedDate.value} ${time}`
-}
-
+// 事件處理器
 const handleMinHourChange = () => {
-  resetEndTimeArea()
-  generateEndTimeOptions()
+  resetEndTime()
 }
 
 const handleMaxHourChange = () => {
-  resetEndTimeArea()
-  generateEndTimeOptions()
+  resetEndTime()
 }
 
 const handleTimeSectorChange = () => {
+  // 檢查當前的 minUsageHours 是否還有效
   if (!minUsageHoursOptions.value.includes(minUsageHours.value)) {
     minUsageHours.value = minUsageHoursOptions.value[0]
   }
 
-  resetStartTimeArea()
-  resetEndTimeArea()
-  getNewTimeSlots()
-  generateStartTimeOptions()
+  resetStartTime()
 }
 
 const handleGenerateCrossDayChange = () => {
-  resetEndTimeArea()
-  generateEndTimeOptions()
+  resetEndTime()
 }
 
-const handleIsNowActive = () => {
-  resetStartTimeArea()
-  resetEndTimeArea()
-  generateStartTimeOptions()
+const handleIsNowActiveChange = () => {
+  resetStartTime()
 }
+
+// 監聽配置變化來重置相關選項
+watch([generateCrossDay], () => {
+  resetEndTime()
+})
+
+watch([isNowActive], () => {
+  resetStartTime()
+})
+
+watch([minUsageHours, maxUsageHours], () => {
+  resetEndTime()
+})
 </script>
 
 <template>
   <div class="w-full">
     <h1 class="text-center text-lg">Time Selector 選擇器</h1>
 
+    <!-- 顯示已佔用的時間段 -->
     <div class="flex items-center justify-center">
       <h3 class="m-2">{{ $t('used-time-slots') }}</h3>
       <ul>
@@ -196,6 +143,7 @@ const handleIsNowActive = () => {
       </ul>
     </div>
 
+    <!-- 配置選項 -->
     <div class="flex flex-wrap items-center justify-center">
       <div class="m-2 flex flex-wrap">
         <div class="mx-2">
@@ -214,12 +162,13 @@ const handleIsNowActive = () => {
             id="is-now-active"
             v-model="isNowActive"
             type="checkbox"
-            @change="handleIsNowActive"
+            @change="handleIsNowActiveChange"
           />
         </div>
       </div>
     </div>
 
+    <!-- 時間配置選項 -->
     <div class="flex flex-wrap items-center justify-center">
       <div class="m-2">
         <label for="time-sector">{{ $t('time-sector') }}：</label>
@@ -264,23 +213,34 @@ const handleIsNowActive = () => {
       </div>
     </div>
 
+    <!-- 時間選擇器 -->
     <div class="flex flex-wrap items-center justify-center">
       <div class="m-2">
         <label for="date-picker">{{ $t('date') }}：</label>
-        <input id="date-picker" v-model="selectedDate" type="date" @change="handleDateChange" />
+        <input id="date-picker" v-model="selectedDateRef" type="date" />
       </div>
 
       <div class="m-2">
         <label for="start-time-picker">{{ $t('start-time') }}：</label>
         <select
           id="start-time-picker"
-          v-model="selectedStartTime"
+          v-model="selectedStartTimeRef"
           :disabled="startTimeOptions.length === 0"
           class="min-w-32"
-          @change="handleStartTimeChange"
         >
-          <option v-for="option in startTimeOptions" :key="option.value" :value="option.value">
-            {{ option.value === 'Now' ? $t('now') : option.label }}
+          <option
+            v-for="option in startTimeOptions"
+            :key="option.value"
+            :value="option.value"
+            :disabled="option.disabled"
+          >
+            {{
+              option.value === 'Now'
+                ? $t('now')
+                : option.value === ''
+                  ? $t(option.label)
+                  : option.label
+            }}
           </option>
         </select>
       </div>
@@ -292,26 +252,48 @@ const handleIsNowActive = () => {
           v-model="selectedEndObj"
           :disabled="endTimeOptions.length === 0"
           class="min-w-32"
-          @change="handleEndTimeChange"
         >
-          <option v-for="option in endTimeOptions" :key="option.value" :value="option">
+          <option
+            v-for="option in endTimeOptions"
+            :key="option.value"
+            :value="option"
+            :disabled="option.disabled"
+          >
             {{
-              option.label.includes('next-day')
-                ? `${option.label.split('_')[0]} ${$t(`${option.label.split('_')[1]}`)}`
-                : option.label
+              option.value === ''
+                ? $t(option.label)
+                : option.label.includes('next-day')
+                  ? `${option.label.split('_')[0]} ${$t(`${option.label.split('_')[1]}`)}`
+                  : option.label
             }}
           </option>
         </select>
       </div>
     </div>
 
+    <!-- 顯示選擇結果 -->
     <div class="flex flex-wrap items-center justify-center">
       <p class="my-2 w-full text-center">
-        {{ $t('selected-start-dateTime') }}： {{ selectedDate }} {{ selectedStartTime }}
+        {{ $t('selected-start-dateTime') }}： {{ selectedDateRef }}
+        {{ selectedStartTimeRef === 'Now' ? $t('now') : selectedStartTimeRef }}
       </p>
       <p class="my-2 w-full text-center">
-        {{ $t('selected-end-dateTime') }}： {{ selectedEndDateTime }}
+        {{ $t('selected-end-dateTime') }}： {{ selectedEndDateTimeRef }}
       </p>
+    </div>
+
+    <!-- 除錯資訊 -->
+    <div class="mt-8 flex justify-center text-sm text-gray-600">
+      <details>
+        <summary>除錯資訊</summary>
+        <div class="mt-2">
+          <p>可用開始時間選項數量: {{ startTimeOptions.length }}</p>
+          <p>可用結束時間選項數量: {{ endTimeOptions.length }}</p>
+          <p>選中的開始時間: {{ selectedStartTimeRef }}</p>
+          <p>選中的結束時間物件: {{ selectedEndObj?.value }}</p>
+          <p>格式化後的結束時間: {{ selectedEndDateTimeRef }}</p>
+        </div>
+      </details>
     </div>
   </div>
 </template>

@@ -71,7 +71,7 @@ const internalValue = computed({
         class="base-input w-full rounded border px-2 focus:border-blue-300 focus:ring-0 focus:ring-blue-300"
       />
 
-      <div v-if="props.hasAppend" class="base-input__append absolute right-1.5 top-2">
+      <div v-if="props.hasAppend" class="base-input__append absolute top-2 right-1.5">
         <slot name="append" />
       </div>
     </div>

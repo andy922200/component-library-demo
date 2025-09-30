@@ -146,7 +146,7 @@ defineExpose({
         left: `${position.y}px`,
         width: 'max-content',
       }"
-      class="floating-dom absolute left-0 top-0 z-20 w-max rounded-sm p-2"
+      class="floating-dom absolute top-0 left-0 z-20 w-max rounded-sm p-2"
       :class="[className.floatingDom, tooltipBgColor, tooltipTextColor]"
     >
       <slot name="content">

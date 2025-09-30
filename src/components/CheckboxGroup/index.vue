@@ -98,7 +98,7 @@ defineOptions({
             :id="fatherOption[0]?.value"
             v-model="fatherOption[0].checked"
             type="checkbox"
-            class="mr-2 cursor-pointer rounded p-2 focus:outline-0 focus:ring-0 focus:ring-offset-0"
+            class="mr-2 cursor-pointer rounded p-2 focus:ring-0 focus:ring-offset-0 focus:outline-0"
             @change="() => fatherOptionChange(fatherOption[0].checked)"
           />
           <label :for="fatherOption[0]?.value" class="cursor-pointer">
@@ -137,7 +137,7 @@ defineOptions({
               :id="item.id"
               v-model="item.checked"
               type="checkbox"
-              class="mr-2 rounded p-2 focus:outline-0 focus:ring-0 focus:ring-offset-0"
+              class="mr-2 rounded p-2 focus:ring-0 focus:ring-offset-0 focus:outline-0"
               :class="{
                 'cursor-not-allowed border-[#ddd] bg-[#eee] opacity-60': !fatherOption[0].checked,
                 'cursor-pointer': fatherOption[0].checked,

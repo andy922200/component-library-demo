@@ -49,7 +49,7 @@ const emits = defineEmits(['toggle'])
 <template>
   <div class="expansion-item" @click="() => emits('toggle')">
     <div
-      class="expansion-item__wrapper cursor-pointer select-none px-4 py-2 font-bold"
+      class="expansion-item__wrapper cursor-pointer px-4 py-2 font-bold select-none"
       :class="{
         'rounded-t-lg': props.isFirst,
         'border-b border-b-gray-300': !props.fullBorder,

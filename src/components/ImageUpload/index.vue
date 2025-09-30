@@ -227,7 +227,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="file && !isUploading" class="relative p-6">
-      <button class="absolute right-0 top-0 px-2 py-1 text-red-500" @click.stop="remove">X</button>
+      <button class="absolute top-0 right-0 px-2 py-1 text-red-500" @click.stop="remove">X</button>
 
       <div class="p-1">
         <slot name="img-preview">

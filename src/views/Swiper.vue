@@ -38,7 +38,7 @@ watch(slides, () => {
         <img
           :src="slide.src"
           :alt="slide.title"
-          class="aspect-video mx-auto my-0 block h-auto w-full object-cover"
+          class="mx-auto my-0 block aspect-video h-auto w-full object-cover"
         />
       </div>
     </div>

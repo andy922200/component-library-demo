@@ -12,9 +12,9 @@ defineOptions({
 
 const props = withDefaults(
   defineProps<{
-    startDate: string
-    endDate: string
-    timeSlotDateMap: Record<string, TimeSlot[]>
+    startDate?: string
+    endDate?: string
+    timeSlotDateMap?: Record<string, TimeSlot[]>
     separator?: string
     daysOfWeekStrArr?: string[]
     firstDayOfWeek?: number
@@ -188,7 +188,7 @@ onUnmounted(() => {
       <!-- Header 下邊線，需浮動以避免被 scroll 內容擋住 -->
       <div
         ref="headerBorderRef"
-        class="scrollable-date-table__header-border sticky left-1.5 top-9 z-20 h-px w-full"
+        class="scrollable-date-table__header-border sticky top-9 left-1.5 z-20 h-px w-full"
         :class="[props.headerBorderColor]"
       />
 
@@ -201,7 +201,7 @@ onUnmounted(() => {
             <th
               v-for="day in daysOfWeekStrDisplayOrder"
               :key="day"
-              class="scrollable-date-table__header-cell sticky top-0 break-all bg-white text-center align-top"
+              class="scrollable-date-table__header-cell sticky top-0 bg-white text-center align-top break-all"
             >
               <div class="py-2 min-[500px]:px-2">
                 {{ day }}
@@ -219,11 +219,11 @@ onUnmounted(() => {
             <td
               v-for="(cell, cellIndex) in week"
               :key="cellIndex"
-              class="scrollable-date-table__cell break-all rounded align-top"
+              class="scrollable-date-table__cell rounded align-top break-all"
               :data-date="cell?.date"
             >
               <div
-                class="scrollable-date-table__div flex h-full min-h-9 flex-col items-center overflow-hidden whitespace-normal p-1 text-center"
+                class="scrollable-date-table__div flex h-full min-h-9 flex-col items-center overflow-hidden p-1 text-center whitespace-normal"
                 :class="[
                   props.activeClickCell
                     ? !cell || cell?.isDisabled
@@ -234,7 +234,7 @@ onUnmounted(() => {
                 @click="handleCellClick(cell)"
               >
                 <div
-                  class="size-full min-h-9 break-all rounded p-0.5 md:p-2 xl:p-4"
+                  class="size-full min-h-9 rounded p-0.5 break-all md:p-2 xl:p-4"
                   :class="[
                     cell?.timeSlots?.length > 0
                       ? props.activeBgCellColor
@@ -292,7 +292,7 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .scrollable-date-table__wrapper {
   .scrollable-date-table__div {
-    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
 </style>

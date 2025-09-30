@@ -80,7 +80,7 @@ const internalValue = computed({
         :disabled="props.disabled"
       />
 
-      <div v-if="props.hasAppend" class="base-textarea__append absolute right-1.5 top-2">
+      <div v-if="props.hasAppend" class="base-textarea__append absolute top-2 right-1.5">
         <slot name="append" />
       </div>
     </div>

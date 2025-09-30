@@ -125,7 +125,7 @@ defineExpose({ visibleLabels })
 </script>
 
 <template>
-  <div class="time-slot mb-6 mt-2 w-full px-4">
+  <div class="time-slot mt-2 mb-6 w-full px-4">
     <div class="flex w-full items-center rounded shadow-[0_0_8px_rgba(0,0,0,0.1)]">
       <div
         v-for="(slot, index) in timeSlots"

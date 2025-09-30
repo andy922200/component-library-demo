@@ -21,7 +21,7 @@ const dateSelectHandler = (e: MouseEvent, isInView: boolean) => {
 
 <template>
   <div
-    class="date-col"
+    class="date-col relative h-0 w-1/7 pt-[calc(100%/6)] text-gray-300 select-none md:pt-[calc(100%/10)]"
     :data-date="props.dateObj.fullDateText"
     :class="{
       'in-view': props.dateObj.isInView,
@@ -42,34 +42,74 @@ const dateSelectHandler = (e: MouseEvent, isInView: boolean) => {
   </div>
 </template>
 
-<style scoped>
-.date-col {
-  @apply relative h-0 w-1/7 select-none pt-[calc(100%/6)] text-sm text-gray-200 md:pt-[calc(100%/8.5)];
-}
-
+<style scoped lang="scss">
 .in-view {
-  @apply cursor-pointer text-black;
+  cursor: pointer;
+  color: #000;
 }
 
 .date-content {
-  @apply absolute left-1/2 top-1/2 flex h-full max-h-[2.2rem] w-full max-w-[2.2rem] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg md:max-h-[2.5rem] md:max-w-[2.5rem];
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  height: 100%;
+  max-height: 2.2rem;
+  width: 100%;
+  max-width: 2.2rem;
+  transform: translate(-50%, -50%);
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+
+  @media (width >= 768px) {
+    max-height: 3rem;
+    max-width: 3rem;
+  }
 }
 
 .in-view > .date-content {
-  @apply hover:bg-slate-100;
+  &:hover {
+    background-color: #f1f5f9; // slate-100
+  }
 }
 
 .in-view > .date-content.holiday::before {
-  @apply absolute left-1/2 top-[5%] h-[6px] w-[6px] -translate-x-1/2 rounded-full content-[''] md:top-[10%];
+  content: '';
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  height: 6px;
+  width: 6px;
+  transform: translateX(-50%);
+  border-radius: 50%;
   background-color: var(--base-cal_holiday-color);
+
+  @media (width >= 768px) {
+    top: 10%;
+  }
 }
 
 .in-view > .date-content.show-bar::after {
-  @apply absolute bottom-[15%] left-1/2 w-4 -translate-x-1/2 rounded-sm border-b-[0.2rem] content-[''] md:bottom-[18%] md:w-5;
+  content: '';
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  width: 1rem; // w-4
+  transform: translateX(-50%);
+  border-radius: 0.125rem;
+  border-bottom: 0.2rem solid;
   border-bottom-color: var(--base-cal_show-bar-color);
+
+  @media (width >= 768px) {
+    bottom: 18%;
+    width: 1.25rem; // w-5
+  }
 }
 
 .in-view.date-selected > .date-content {
-  @apply pointer-events-none text-[#ffffff] bg-[#808080D9];
+  pointer-events: none;
+  background-color: rgb(128 128 128 / 85%); // #808080D9
+  color: #fff;
 }
 </style>

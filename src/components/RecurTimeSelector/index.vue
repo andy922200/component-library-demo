@@ -126,7 +126,7 @@ defineOptions({
       :key="index"
       class="my-4 flex w-full flex-wrap items-center px-4 lg:my-2 lg:justify-center lg:px-0"
     >
-      <div class="label__wrapper mb-2 mr-2 w-full lg:mb-0 lg:w-auto">
+      <div class="label__wrapper mr-2 mb-2 w-full lg:mb-0 lg:w-auto">
         <label :for="`toggle-${index}`" class="mx-2">{{ item.text }}</label>
         <span v-if="item.isDisableDay" class="inline-block w-20 text-center">
           <slot name="disable-day-text">無適用時段</slot>

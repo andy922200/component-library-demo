@@ -49,7 +49,7 @@ const { width: windowWidth } = useWindowSize()
             class="div-table__cell--mobile mb-2 flex items-center px-2"
           >
             <span
-              class="color-[#333] mx-2 inline-block w-20 whitespace-pre-wrap break-all font-bold"
+              class="color-[#333] mx-2 inline-block w-20 font-bold break-all whitespace-pre-wrap"
             >
               {{ headerItem.titleKey }}
             </span>

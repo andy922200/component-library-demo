@@ -144,7 +144,7 @@ const goPrev = () => {
 </script>
 
 <template>
-  <div class="mb-4 w-full select-none overflow-hidden rounded-md shadow-md md:mb-0">
+  <div class="mb-4 w-full overflow-hidden rounded-md shadow-md select-none md:mb-0">
     <div
       class="calender-header flex min-h-[3.2rem] w-full items-center justify-between bg-[#80808014] px-3 text-lg"
     >
@@ -172,7 +172,7 @@ const goPrev = () => {
           :key="full"
           :data-full="full"
           :data-brief="brief"
-          class="flex w-1/7 select-none items-center justify-center py-3 text-center text-[0.85rem] text-gray-400 before:content-[attr(data-brief)] md:before:content-[attr(data-full)]"
+          class="flex w-1/7 items-center justify-center py-3 text-center text-[0.85rem] text-gray-400 select-none before:content-[attr(data-brief)] md:before:content-[attr(data-full)]"
         />
       </div>
       <div class="relative flex flex-wrap">

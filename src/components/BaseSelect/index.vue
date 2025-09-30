@@ -74,7 +74,7 @@ defineOptions({
       :id="props.id"
       v-model="internalValue"
       :multiple="props.multiple"
-      class="base-select w-full truncate"
+      class="base-select w-full truncate rounded border border-[#ccc] py-2 pr-8 pl-2 focus:border-blue-300 focus:ring-blue-300"
       :class="`${selectedSelectNullStyleActive ? 'text-normal-gray' : ''} ${props.isError ? '!border-red-500' : ''} ${selectClass}`"
       v-bind="attrs"
     >
@@ -91,9 +91,3 @@ defineOptions({
     </select>
   </div>
 </template>
-
-<style scoped>
-.base-select {
-  @apply rounded border border-[#ccc] py-2 pl-2 pr-8 focus:border-blue-300 focus:ring-blue-300;
-}
-</style>

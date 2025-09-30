@@ -31,7 +31,7 @@ defineOptions({
         v-model="innerValue"
         type="color"
         list="colors"
-        class="absolute left-0 top-0 size-full cursor-pointer opacity-0"
+        class="absolute top-0 left-0 size-full cursor-pointer opacity-0"
         tabindex="-1"
       />
     </div>

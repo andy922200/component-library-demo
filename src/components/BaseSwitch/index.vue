@@ -65,7 +65,7 @@ defineOptions({
   <div class="base-switch inline-flex items-center p-1">
     <span
       v-if="props.offSideStr"
-      class="off mx-1 my-0 min-w-[60px] max-w-[120px] truncate text-center text-sm text-[#cccccc]"
+      class="off mx-1 my-0 max-w-[120px] min-w-[60px] truncate text-center text-sm text-[#cccccc]"
       :style="{ color: isBaseSwitchOn ? inactiveStrColor : activeStrColor }"
     >
       {{ $t(offSideStr) }}
@@ -94,7 +94,7 @@ defineOptions({
     </div>
     <span
       v-if="props.onSideStr"
-      class="on mx-3 my-0 min-w-[60px] max-w-[120px] truncate text-center text-sm text-[#cccccc]"
+      class="on mx-3 my-0 max-w-[120px] min-w-[60px] truncate text-center text-sm text-[#cccccc]"
       :style="{ color: isBaseSwitchOn ? activeStrColor : inactiveStrColor }"
     >
       {{ $t(onSideStr) }}

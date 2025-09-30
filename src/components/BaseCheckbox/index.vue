@@ -57,7 +57,7 @@ const internalValue = computed({
 
 <template>
   <label
-    class="base-checkbox flex select-none items-center text-sm"
+    class="base-checkbox flex items-center text-sm select-none"
     :class="{
       'cursor-not-allowed opacity-60': disabled,
       'cursor-pointer': !disabled,
@@ -99,12 +99,6 @@ const internalValue = computed({
 
 <style scoped lang="scss">
 .base-checkbox {
-  input:checked ~ .base-checkbox__mark {
-    .base-checkbox__mark-wrapper {
-      display: block;
-    }
-  }
-
   .base-checkbox__mark {
     .base-checkbox__mark-wrapper {
       display: none;
@@ -113,12 +107,18 @@ const internalValue = computed({
     .base-checkbox__mark-icon {
       position: absolute;
       left: 0.375rem;
-      top: 0.12375rem;
+      top: 0.1237rem;
       width: 0.375rem;
       height: 0.75rem;
       border: solid;
       border-width: 0 0.125rem 0.125rem 0;
       transform: rotate(45deg);
+    }
+  }
+
+  input:checked ~ .base-checkbox__mark {
+    .base-checkbox__mark-wrapper {
+      display: block;
     }
   }
 }

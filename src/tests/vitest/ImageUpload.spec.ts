@@ -178,7 +178,7 @@ describe('ImageUpload.vue', () => {
   it('should emit remove and reset file state', async () => {
     const wrapper = mount(ImageUpload, {
       props: {
-        modelValue: createFile('remove.png', 0.1),
+        file: createFile('remove.png', 0.1),
         showImage: true,
       },
     })
@@ -201,33 +201,37 @@ describe('ImageUpload.vue', () => {
     expect(wrapper.text()).toContain('自定義提示文字')
   })
 
-  it('should render custom img-preview slot when showImage is true and file exists', () => {
+  it('should render custom img-preview slot when showImage is true and file exists', async () => {
     const mockFile = new File(['mock'], 'preview.png', { type: 'image/png' })
     const wrapper = mount(ImageUpload, {
       props: {
-        modelValue: mockFile,
+        file: mockFile,
         showImage: true,
       },
       slots: {
-        'img-preview': '<div class="custom-preview">圖片插槽內容</div>',
+        'image-preview': '<div class="custom-preview">圖片插槽內容</div>',
       },
     })
+
+    await flushPromises()
 
     expect(wrapper.find('.custom-preview').exists()).toBe(true)
     expect(wrapper.text()).toContain('圖片插槽內容')
   })
 
-  it('should render custom file-name-preview slot when showImage is false and file exists', () => {
+  it('should render custom file-name-preview slot when showImage is false and file exists', async () => {
     const mockFile = new File(['mock'], 'preview.png', { type: 'image/png' })
     const wrapper = mount(ImageUpload, {
       props: {
-        modelValue: mockFile,
+        file: mockFile, // 使用 file prop
         showImage: false,
       },
       slots: {
         'file-name-preview': '<div class="custom-name">檔名插槽</div>',
       },
     })
+
+    await flushPromises()
 
     expect(wrapper.find('.custom-name').exists()).toBe(true)
     expect(wrapper.text()).toContain('檔名插槽')

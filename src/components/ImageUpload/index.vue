@@ -1,30 +1,33 @@
 <script setup lang="ts">
 import heicConvert from 'heic-convert/browser'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+
+const file = defineModel<File | null | undefined>('file', {
+  default: null,
+})
 
 const props = withDefaults(
   defineProps<{
-    modelValue?: File | null
     showImage?: boolean
     imageAltStr?: string
     wrapperClass?: string
     defaultMsg?: string
     maxSizeInMB?: number
     acceptImgTypes?: string[]
+    index?: number
   }>(),
   {
-    modelValue: null,
     showImage: false,
     imageAltStr: 'preview',
     wrapperClass: '',
     defaultMsg: 'Drag or Click here',
     maxSizeInMB: 2,
     acceptImgTypes: () => ['*'],
+    index: undefined,
   },
 )
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', file: File | undefined | null): void
   (
     e: 'upload',
     payload: {
@@ -36,13 +39,9 @@ const emit = defineEmits<{
       isOverSize: boolean
     } | null,
   ): void
-  (e: 'remove'): void
+  (e: 'remove', index?: number): void
 }>()
 
-const file = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value),
-})
 const maxSizeInBytes = computed(() => props.maxSizeInMB * 1024 * 1024)
 const acceptTypes = computed(() => {
   if (props.acceptImgTypes.length === 0 || props.acceptImgTypes.includes('*')) return 'image/*'
@@ -187,7 +186,7 @@ const remove = async () => {
   triggerPreviewUrl({ isReset: true })
   file.value = null
   emit('upload', null)
-  emit('remove')
+  emit('remove', props.index)
 }
 
 onBeforeUnmount(() => {
@@ -195,6 +194,19 @@ onBeforeUnmount(() => {
     triggerPreviewUrl({ isReset: true })
   }
 })
+
+watch(
+  () => file.value,
+  (newFile) => {
+    if (!newFile) {
+      triggerPreviewUrl({ isReset: true })
+    } else {
+      const url = triggerPreviewUrl({ file: newFile })
+      previewUrl.value = url
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -214,34 +226,54 @@ onBeforeUnmount(() => {
       @change="handleFileChange"
     />
 
-    <div v-if="isUploading" class="p-6">
-      <slot name="uploading">
+    <slot v-if="isUploading" name="uploading">
+      <div class="p-6">
         <p class="text-gray-500">Uploading...</p>
-      </slot>
-    </div>
-
-    <div v-if="!file && !isUploading" class="p-6">
-      <slot name="initial-msg">
-        {{ hintMsg }}
-      </slot>
-    </div>
-
-    <div v-if="file && !isUploading" class="relative p-6">
-      <button class="absolute top-0 right-0 px-2 py-1 text-red-500" @click.stop="remove">X</button>
-
-      <div class="p-1">
-        <slot name="img-preview">
-          <div v-if="showImage" class="mx-auto">
-            <img :src="previewUrl" :alt="imageAltStr" class="h-auto max-w-full" />
-          </div>
-        </slot>
       </div>
+    </slot>
 
-      <slot name="file-name-preview">
-        <div v-if="!showImage" class="mx-auto">
+    <slot v-if="!file && !isUploading" name="initial-msg">
+      <div class="p-6">
+        {{ hintMsg }}
+      </div>
+    </slot>
+
+    <slot
+      v-if="file && !isUploading && !showImage"
+      name="file-name-preview"
+      :file="file"
+      :remove="remove"
+    >
+      <div class="relative p-6">
+        <button class="absolute top-0 right-0 px-2 py-1 text-red-500" @click.stop="remove">
+          X
+        </button>
+
+        <div class="mx-auto">
           <p>{{ file.name }}</p>
         </div>
-      </slot>
-    </div>
+      </div>
+    </slot>
+
+    <slot
+      v-if="file && !isUploading && showImage"
+      name="image-preview"
+      :file="file"
+      :remove="remove"
+      :preview-url="previewUrl"
+      :image-alt-str="imageAltStr"
+    >
+      <div class="relative p-6">
+        <button class="absolute top-0 right-0 px-2 py-1 text-red-500" @click.stop="remove">
+          X
+        </button>
+
+        <div class="p-1">
+          <div class="mx-auto">
+            <img :src="previewUrl" :alt="imageAltStr" class="h-auto max-w-full" />
+          </div>
+        </div>
+      </div>
+    </slot>
   </div>
 </template>

@@ -8,7 +8,7 @@ export enum PaymentMode {
   ECPAY = 'ecpay',
   NEWEBPAY = 'newebpay',
 }
-export type TPaymentMode = (typeof PaymentMode)[keyof typeof PaymentMode]
+export type TPaymentMode = `${PaymentMode}`
 
 export const paymentModeMap = {
   '-1': PaymentMode.NO_PAYMENT,
@@ -21,18 +21,18 @@ export const paymentModeMap = {
 export const checkHasPaymentMode = (mode: TPaymentMode) => mode !== PaymentMode.NO_PAYMENT
 
 /* 付款情境 */
-export enum paymentScenario {
+export enum PaymentScenario {
   FREE_OR_COUPON = 'free_or_coupon',
   MONEY_ONLY = 'money_only',
   POINT_ONLY = 'point_only',
   MONEY_AND_POINT = 'money_and_point',
 }
 
-export const paymentScenarioMap = {
-  '-1': paymentScenario.FREE_OR_COUPON,
-  0: paymentScenario.MONEY_ONLY,
-  1: paymentScenario.POINT_ONLY /** 點數付款一定要有 eilis 會員資料 */,
-  2: paymentScenario.MONEY_AND_POINT,
+export const PaymentScenarioMap = {
+  '-1': PaymentScenario.FREE_OR_COUPON,
+  0: PaymentScenario.MONEY_ONLY,
+  1: PaymentScenario.POINT_ONLY /** 點數付款一定要有 eilis 會員資料 */,
+  2: PaymentScenario.MONEY_AND_POINT,
 }
 
 /* 根據後台回傳值，檢查是否啟用 & 是否顯示選項 */
@@ -299,7 +299,7 @@ export const canUsePointPay = (
 ) => {
   const isActive = isPointPayActive(value)
   const errMsgArr = []
-  const hasPointPrice = point ? point > 0 : false
+  const hasPointPrice = (point ?? 0) >= 0
 
   if (!isActive) {
     errMsgArr.push('Point payment is not available.')
@@ -315,34 +315,22 @@ export const canUsePointPay = (
   }
 }
 
-export const getPaymentScenario = ({
-  payment,
-  linepay,
-  jkopay,
-  cvs,
-  applepay,
-  point_enabled,
-}: {
-  payment: TPaymentMode
-  linepay: '0' | '1'
-  jkopay: '0' | '1'
-  cvs: '0' | '1'
-  applepay: '0' | '1'
-  point_enabled: '0' | '1'
-}) => {
-  const hasMoneyScenario =
-    payment !== PaymentMode.NO_PAYMENT ||
-    isLinePayActive(linepay) ||
-    isJkoPayActive(jkopay) ||
-    isCvsActive(cvs) ||
-    isApplePayActive(applepay)
-  const hasPointScenario = isPointPayActive(point_enabled)
+/**
+ * Email會員代碼付款
+ */
+export const isMemberBookingByEmailActive = (enabled: '0' | '1') => enabled === '1'
+export const canUseMemberBookingByEmail = (value: '0' | '1') => {
+  const isActive = isMemberBookingByEmailActive(value)
+  const errMsgArr = []
 
-  if (hasMoneyScenario && hasPointScenario) return paymentScenario.MONEY_AND_POINT
-  if (hasPointScenario) return paymentScenario.POINT_ONLY
-  if (hasMoneyScenario) return paymentScenario.MONEY_ONLY
+  if (!isActive) {
+    errMsgArr.push('Member booking by email is not available.')
+  }
 
-  return paymentScenario.FREE_OR_COUPON
+  return {
+    state: isActive,
+    errMsg: errMsgArr.join('\n'),
+  }
 }
 
 export interface IPaymentStrategy {
@@ -362,103 +350,21 @@ export interface IPaymentStrategy {
   cvs: '0' | '1'
   applepay: '0' | '1'
   // Point
-  point_enabled: '0' | '1'
-  hasMemberData: boolean
+  pointEnabled: '0' | '1'
+  hasPointMemberData: '0' | '1'
+  // Member-Booking-By-Email
+  enableMemberBookingByEmail: '0' | '1'
 }
 
-export const paymentStrategies = [
-  {
-    text: '信用卡付款 Credit Card',
-    value: 'credit-card',
-    isAvailable: (config: IPaymentStrategy) => isCreditCardActive(config.payment),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { orderDate } = config
-      const hasPaymentMode = checkHasPaymentMode(config.payment)
-      return (
-        !canUseCreditCard({ orderDate, payment: config.payment, price: config.price }).state ||
-        !hasPaymentMode
-      )
-    },
-  },
-  {
-    text: '銀行轉帳 Transfer',
-    value: 'TRANSFER',
-    isAvailable: (config: IPaymentStrategy) => isTransferActive(config.transfer),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { transfer, bookStartTime, isBookingRightNow } = config
-      const hasPaymentMode = checkHasPaymentMode(config.payment)
-      return (
-        !canUseTransfer({ transfer, bookStartTime, isBookingRightNow, price: config.price })
-          .state || !hasPaymentMode
-      )
-    },
-  },
-  {
-    text: 'LINE Pay',
-    value: 'LINEPAY',
-    isAvailable: (config: IPaymentStrategy) => isLinePayActive(config.linepay),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { linepay, price, cycleTimes, orderDate } = config
-      const hasPaymentMode = checkHasPaymentMode(config.payment)
-      return !canUseLinePay({ linepay, price, cycleTimes, orderDate }).state || !hasPaymentMode
-    },
-  },
-  {
-    text: '街口支付 JKOPAY',
-    value: 'JKPAY',
-    isAvailable: (config: IPaymentStrategy) => isJkoPayActive(config.jkopay),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { jkopay, orderDate } = config
-      const hasPaymentMode = checkHasPaymentMode(config.payment)
-      return !canUseJkoPay({ jkopay, orderDate, price: config.price }).state || !hasPaymentMode
-    },
-  },
-  {
-    text: '超商代碼付款 CVS',
-    value: 'CVS',
-    isAvailable: (config: IPaymentStrategy) => isCvsActive(config.cvs),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { cvs, price, isBookingRightNow } = config
-      const hasPaymentMode = checkHasPaymentMode(config.payment)
-      return !canUseCvsPay({ cvs, price, isBookingRightNow }).state || !hasPaymentMode
-    },
-  },
-  {
-    text: 'Apple Pay',
-    value: 'APPLEPAY',
-    isAvailable: (config: IPaymentStrategy) => isApplePayActive(config.applepay),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { applepay } = config
-      const hasPaymentMode = checkHasPaymentMode(config.payment)
-      return !canUseApplePay({ applepay, price: config.price }).state || !hasPaymentMode
-    },
-  },
-  {
-    text: '點數付款 Point',
-    value: 'POINT',
-    isAvailable: (config: IPaymentStrategy) => isPointPayActive(config.point_enabled),
-    isDisabled: (config: IPaymentStrategy) => {
-      const { point_enabled, hasMemberData, payment } = config
-      const hasPaymentMode = checkHasPaymentMode(payment)
-      return !canUsePointPay(point_enabled, hasMemberData, config.point).state || !hasPaymentMode
-    },
-  },
-  {
-    text: '優惠代碼付款 Coupon',
-    value: 'COUPON',
-    isAvailable: (config: IPaymentStrategy) => {
-      const isNegativePrice = config.price < 0
-      return !isNegativePrice
-    },
-    isDisabled: () => false,
-  },
-  {
-    text: '免費 Free',
-    value: 'FREE',
-    isAvailable: (config: IPaymentStrategy) => {
-      const isFree = config.price <= 0
-      return isFree
-    },
-    isDisabled: () => false,
-  },
-]
+export enum PaymentStrategyValue {
+  CREDIT_CARD = 'CREDIT_CARD',
+  TRANSFER = 'TRANSFER',
+  LINEPAY = 'LINEPAY',
+  JKOPAY = 'JKOPAY',
+  CVS = 'CVS',
+  APPLEPAY = 'APPLEPAY',
+  POINT = 'POINT',
+  COUPON = 'COUPON',
+  FREE = 'FREE',
+  MEMBER_BOOKING_BY_EMAIL = 'MEMBER_BOOKING_BY_EMAIL',
+}

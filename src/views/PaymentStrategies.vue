@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import CreditCardInfo from '@/components/CreditCardInfo/index.vue'
 import { usePaymentStrategies } from '@/composables/usePaymentStrategies'
 import { PaymentMode, paymentModeMap, type TPaymentMode } from '@/constants/paymentStrategies'
 import dayjs from '@/plugins/dayjs'
@@ -10,6 +11,7 @@ defineOptions({
 })
 
 const todayObj = dayjs()
+const paymentMethod = ref<'price' | 'point'>('price')
 const paymentConfigAtStore = ref<{
   price: number
   point: number
@@ -67,8 +69,8 @@ const paymentConfig = computed(() => ({
   enableMemberBookingByEmail: paymentConfigAtStore.value.enable_member_booking,
 }))
 
-const usePoint = computed(() => paymentConfigAtStore.value.point_enabled === '1')
-const usePrice = computed(() => !usePoint.value)
+const usePoint = computed(() => paymentMethod.value === 'point')
+const usePrice = computed(() => paymentMethod.value === 'price')
 const hasPayment = computed(() => paymentConfigAtStore.value.payment !== PaymentMode.NO_PAYMENT)
 const enableMemberBookingByEmail = computed(
   () => paymentConfigAtStore.value.enable_member_booking === '1',
@@ -97,6 +99,21 @@ const togglePaymentOption = (
 const setPaymentMode = (modeKey: '-1' | '0' | '1' | '2' | '3') => {
   paymentConfigAtStore.value.payment = paymentModeMap[modeKey]
 }
+
+// 信用卡表單資料
+const creditCardForm = ref({
+  cardNumber: { val: '', isError: false },
+  expiryYear: { val: '', isError: false },
+  expiryMonth: { val: '', isError: false },
+  cvv: { val: '', isError: false },
+})
+
+const showCreditCardForm = computed(() => {
+  return (
+    paymentConfigAtStore.value.payment === PaymentMode.NEWEBPAY &&
+    selectedPaymentType.value === PaymentMode.NEWEBPAY
+  )
+})
 </script>
 
 <template>
@@ -115,6 +132,10 @@ const setPaymentMode = (modeKey: '-1' | '0' | '1' | '2' | '3') => {
             {{ option.text }} <span v-if="option.disabled"></span>
           </option>
         </select>
+      </div>
+      <div class="my-2 flex w-full justify-center space-x-4">
+        <label> <input v-model="paymentMethod" type="radio" value="price" /> 使用價格 </label>
+        <label> <input v-model="paymentMethod" type="radio" value="point" /> 使用點數 </label>
       </div>
       <p class="mx-2">使用點數: {{ usePoint }}</p>
       <p class="mx-2">使用價格: {{ usePrice }}</p>
@@ -306,6 +327,20 @@ const setPaymentMode = (modeKey: '-1' | '0' | '1' | '2' | '3') => {
           >
             會員代碼預約: {{ paymentConfigAtStore.enable_member_booking === '1' ? '開啟' : '關閉' }}
           </button>
+        </div>
+      </div>
+
+      <!-- Credit Card Form -->
+      <div v-if="showCreditCardForm" class="mt-6 w-full">
+        <h2 class="text-md mb-4 text-center font-semibold">信用卡資訊 Credit Card Information</h2>
+
+        <CreditCardInfo v-model="creditCardForm" />
+
+        <div class="mt-4 flex flex-wrap justify-center space-x-4 rounded bg-gray-50 p-3 text-xs">
+          <p><strong>卡號:</strong> {{ creditCardForm.cardNumber.val }}</p>
+          <p><strong>有效年:</strong> {{ creditCardForm.expiryYear.val }}</p>
+          <p><strong>有效月:</strong> {{ creditCardForm.expiryMonth.val }}</p>
+          <p><strong>驗證碼:</strong> {{ creditCardForm.cvv.val }}</p>
         </div>
       </div>
     </div>

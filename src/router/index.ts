@@ -141,6 +141,11 @@ const routes = [
     name: 'payment-strategies',
     component: () => import('../views/PaymentStrategies.vue'),
   },
+  {
+    path: '/invoice-info',
+    name: 'invoice-info',
+    component: () => import('../views/InvoiceInfo.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

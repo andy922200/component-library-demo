@@ -20,6 +20,7 @@ const props = withDefaults(
     max?: number
     maxLength?: number
     hasAppend?: boolean
+    validateFunc?: (value: string) => boolean
   }>(),
   {
     modelValue: '',
@@ -34,10 +35,11 @@ const props = withDefaults(
     max: undefined,
     maxLength: undefined,
     hasAppend: false,
+    validateFunc: undefined,
   },
 )
 
-const emits = defineEmits(['update:modelValue'])
+const emits = defineEmits(['update:modelValue', 'validate'])
 const isControlled = computed(() => props.modelValue !== undefined)
 const localValue = ref(props.modelValue)
 
@@ -48,6 +50,13 @@ const internalValue = computed({
     emits('update:modelValue', value)
   },
 })
+
+const handleBlur = () => {
+  if (props.validateFunc) {
+    const isValid = props.validateFunc(String(internalValue.value))
+    emits('validate', isValid)
+  }
+}
 </script>
 
 <template>
@@ -69,6 +78,7 @@ const internalValue = computed({
         :max="props.max"
         :disabled="props.disabled"
         class="base-input w-full rounded border px-2 focus:border-blue-300 focus:ring-0 focus:ring-blue-300"
+        @change="handleBlur"
       />
 
       <div v-if="props.hasAppend" class="base-input__append absolute top-2 right-1.5">

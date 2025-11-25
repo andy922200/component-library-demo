@@ -76,6 +76,7 @@ const selectedLanguageModel = computed({
       <router-link :to="{ name: 'payment-strategies' }" class="m-2">
         Payment Strategies 付款方式
       </router-link>
+      <router-link :to="{ name: 'invoice-info' }" class="m-2"> Invoice Info 發票資訊 </router-link>
     </div>
   </div>
 

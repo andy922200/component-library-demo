@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { onMounted } from 'vue'
 
-import { LayoutLanguages, Locales } from './plugins/i18n/config/locales'
-import { useMainStore } from './store/modules/main'
+import { useLanguage } from '@/composables/useLanguage'
 
-const mainStore = useMainStore()
-const { locale } = useI18n()
-const selectedLanguageModel = computed({
-  get() {
-    return mainStore.selectedLanguage
-  },
-  set(value: Locales) {
-    locale.value = value
-    mainStore.setLanguage(value)
-  },
+import { LayoutLanguages } from './plugins/i18n/config/locales'
+
+const { language, getLanguageBasedOnBrowser } = useLanguage()
+
+onMounted(() => {
+  getLanguageBasedOnBrowser()
 })
 </script>
 
@@ -25,7 +19,7 @@ const selectedLanguageModel = computed({
 
   <div class="my-2 flex items-center justify-center">
     <p class="mx-2">語言選擇 Language Select</p>
-    <select v-model="selectedLanguageModel">
+    <select v-model="language">
       <option v-for="list in LayoutLanguages" :key="list.param" :value="list.param">
         {{ list.title }}
       </option>
@@ -77,6 +71,7 @@ const selectedLanguageModel = computed({
         Payment Strategies 付款方式
       </router-link>
       <router-link :to="{ name: 'invoice-info' }" class="m-2"> Invoice Info 發票資訊 </router-link>
+      <router-link :to="{ name: 'promo-coupon' }" class="m-2"> Promo Coupon 優惠券 </router-link>
     </div>
   </div>
 

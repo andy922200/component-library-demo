@@ -23,5 +23,26 @@
   "disabled": "停止使用",
   "used": "已使用",
   "please-select-start-time": "开始时间",
-  "please-select-end-time": "结束时间"
+  "please-select-end-time": "结束时间",
+  "coupon-type": {
+    "free": "免费",
+    "discount": "折扣",
+    "reduce-price": "折价",
+    "reduce-hours": "折抵时数"
+  },
+  "coupon-info": {
+    "free": "【 免费优惠 】",
+    "discount":"【 折扣优惠 {value} 折 】",
+    "reduce-price":"【 折价优惠 {value} 元 】",
+    "reduce-hours":"【 折抵时数 {value} 小时 】"
+  },
+  "coupon-warn-text": {
+    "wrong": "查无此代码，请重新输入",
+    "used": "此代码已无法使用",
+    "noPhone": "请先填写付款人信息后再重新搜索",
+    "limited": "已达单日使用上限",
+    "blocked": "已有订单使用，订单结束后才能再次使用",
+    "not-available-at-seat-or-event": "代码不适用此场域,请重新输入",
+    "not-available": "目前为非优惠时段"
+  }
 }

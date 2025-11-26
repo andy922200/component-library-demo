@@ -23,5 +23,26 @@
   "disabled": "Disabled",
   "used": "Used",
   "please-select-start-time": "Start Time",
-  "please-select-end-time": "End Time"
+  "please-select-end-time": "End Time",
+  "coupon-type": {
+    "free": "Free",
+    "discount": "Discount",
+    "reduce-price": "Reduce Price",
+    "reduce-hours": "Reduce Hours"
+  },
+  "coupon-info": {
+    "free": "【 Free 】",
+    "discount":"【 {value}% OFF 】",
+    "reduce-price":"【 Reduce {value} TWD 】",
+    "reduce-hours":"【 {value} Hours Free 】"
+  },
+  "coupon-warn-text": {
+    "wrong": "Error Code",
+    "used": "Code has been used",
+    "noPhone": "Please fill payer info first, then try again",
+    "limited": "Daily usage limit reached",
+    "blocked": "Code has been used, you can only use it after the order has ended",
+    "not-available-at-seat-or-event": "Code is not available in this space",
+    "not-available": "Not available now"
+  }
 }

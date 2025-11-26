@@ -146,6 +146,11 @@ const routes = [
     name: 'invoice-info',
     component: () => import('../views/InvoiceInfo.vue'),
   },
+  {
+    path: '/promo-coupon',
+    name: 'promo-coupon',
+    component: () => import('../views/PromoCoupon.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

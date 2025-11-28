@@ -151,6 +151,11 @@ const routes = [
     name: 'promo-coupon',
     component: () => import('../views/PromoCoupon.vue'),
   },
+  {
+    path: '/multi-select',
+    name: 'multi-select',
+    component: () => import('../views/MultiSelect.vue'),
+  },
 ]
 
 const baseURL = process.env.NODE_ENV === 'production' ? '/component-library-demo/' : ''

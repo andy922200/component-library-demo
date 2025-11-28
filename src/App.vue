@@ -72,6 +72,7 @@ onMounted(() => {
       </router-link>
       <router-link :to="{ name: 'invoice-info' }" class="m-2"> Invoice Info 發票資訊 </router-link>
       <router-link :to="{ name: 'promo-coupon' }" class="m-2"> Promo Coupon 優惠券 </router-link>
+      <router-link :to="{ name: 'multi-select' }" class="m-2"> MultiSelect 多選下拉 </router-link>
     </div>
   </div>
 

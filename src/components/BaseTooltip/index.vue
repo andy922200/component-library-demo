@@ -8,6 +8,7 @@ import {
   Placement,
   shift,
 } from '@floating-ui/dom'
+import { onClickOutside } from '@vueuse/core'
 import { nextTick, onMounted, ref } from 'vue'
 
 import { isMobileAgent } from '@/helpers'
@@ -21,6 +22,7 @@ const props = withDefaults(
     tooltipBgColor?: string
     tooltipTextColor?: string
     arrowBorderColor?: string
+    triggerEventType?: 'hover' | 'click'
   }>(),
   {
     offsetValue: 8,
@@ -36,6 +38,7 @@ const props = withDefaults(
     tooltipBgColor: 'bg-gray-800',
     tooltipTextColor: 'text-black',
     arrowBorderColor: '',
+    triggerEventType: 'hover',
   },
 )
 
@@ -91,6 +94,18 @@ onMounted(async () => {
   setFloating()
 })
 
+onClickOutside(
+  triggerItem,
+  () => {
+    if (props.triggerEventType === 'click') {
+      displayTooltip.value = false
+    }
+  },
+  {
+    ignore: [floatingDom],
+  },
+)
+
 const getArrowClass = (placement: string) => {
   const side = placement.split('-')[0]
   const baseClass = 'floating-arrow absolute size-2 rotate-45'
@@ -111,10 +126,22 @@ const getArrowClass = (placement: string) => {
 }
 
 const showTooltip = (value: boolean, type: string) => {
+  if (props.triggerEventType === 'click') {
+    if (['mouse-enter', 'mouse-leave', 'touch-start', 'touch-end'].includes(type)) return
+  }
+
   if (isMobileAgent()) {
     if (['mouse-enter'].includes(type)) return
   }
+
   displayTooltip.value = value
+}
+
+const toggleTooltip = (event: Event) => {
+  if (props.triggerEventType === 'click') {
+    event.stopPropagation()
+    displayTooltip.value = !displayTooltip.value
+  }
 }
 
 defineExpose({
@@ -128,6 +155,7 @@ defineExpose({
       ref="triggerItem"
       class="trigger-item relative flex w-fit items-center"
       :class="className.triggerItem"
+      @click="toggleTooltip"
       @touchstart="showTooltip(true, 'touch-start')"
       @touchend="showTooltip(false, 'touch-end')"
       @mouseenter="showTooltip(true, 'mouse-enter')"

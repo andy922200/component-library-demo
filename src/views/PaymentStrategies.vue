@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 
 import CreditCardInfo from '@/components/CreditCardInfo/index.vue'
 import { usePaymentStrategies } from '@/composables/usePaymentStrategies'
-import { PaymentMode, paymentModeMap, type TPaymentMode } from '@/constants/paymentStrategies'
+import { PaymentMode, paymentModeMap } from '@/constants/paymentStrategies'
 import dayjs from '@/plugins/dayjs'
 
 defineOptions({
@@ -19,9 +19,9 @@ const paymentConfigAtStore = ref<{
   bookingStartTime: string
   isBookingRightNow: boolean
   cycleTimes: number
-  payment: TPaymentMode
+  payment: string
   transfer: {
-    accept: '0' | '1'
+    accept: '0' | '1' | '2'
     hour: string
     startTime: string
     endTime: string
@@ -30,6 +30,7 @@ const paymentConfigAtStore = ref<{
   jkopay: '0' | '1'
   cvs: '0' | '1'
   applepay: '0' | '1'
+  ipass_twqr: '0' | '1'
   point_enabled: '0' | '1'
   has_point_member_data: '0' | '1'
   enable_member_booking: '0' | '1'
@@ -46,6 +47,7 @@ const paymentConfigAtStore = ref<{
   jkopay: '0',
   cvs: '0',
   applepay: '0',
+  ipass_twqr: '0',
   point_enabled: '0',
   has_point_member_data: '1',
   enable_member_booking: '0',
@@ -53,20 +55,21 @@ const paymentConfigAtStore = ref<{
 
 const paymentConfig = computed(() => ({
   price: paymentConfigAtStore.value.price,
-  point: paymentConfigAtStore.value.point,
-  orderDate: paymentConfigAtStore.value.orderDate,
-  bookStartTime: paymentConfigAtStore.value.bookingStartTime,
-  isBookingRightNow: paymentConfigAtStore.value.isBookingRightNow,
+  paymentMode: paymentConfigAtStore.value.payment,
+  isAcceptTransfer: paymentConfigAtStore.value.transfer.accept !== '0',
+  ignoreTransferDeadline: paymentConfigAtStore.value.transfer.accept === '2',
+  transferStart: paymentConfigAtStore.value.transfer.startTime,
+  transferEnd: paymentConfigAtStore.value.transfer.endTime,
+  transferLimitHour: +(paymentConfigAtStore.value.transfer.hour || 0),
+  enableMemberBookingByEmail: paymentConfigAtStore.value.enable_member_booking === '1',
+  usePoint: paymentMethod.value === 'point' && paymentConfigAtStore.value.point_enabled === '1',
+  hasMember: paymentConfigAtStore.value.has_point_member_data === '1',
+  hasLinePay: paymentConfigAtStore.value.linepay === '1',
+  hasJkoPay: paymentConfigAtStore.value.jkopay === '1',
+  hasCvsCodePay: paymentConfigAtStore.value.cvs === '1',
+  hasApplePay: paymentConfigAtStore.value.applepay === '1',
+  hasIPassTWQR: paymentConfigAtStore.value.ipass_twqr === '1',
   cycleTimes: paymentConfigAtStore.value.cycleTimes,
-  payment: paymentConfigAtStore.value.payment,
-  transfer: paymentConfigAtStore.value.transfer,
-  linepay: paymentConfigAtStore.value.linepay,
-  jkopay: paymentConfigAtStore.value.jkopay,
-  cvs: paymentConfigAtStore.value.cvs,
-  applepay: paymentConfigAtStore.value.applepay,
-  pointEnabled: paymentConfigAtStore.value.point_enabled,
-  hasPointMemberData: paymentConfigAtStore.value.has_point_member_data,
-  enableMemberBookingByEmail: paymentConfigAtStore.value.enable_member_booking,
 }))
 
 const usePoint = computed(() => paymentMethod.value === 'point')
@@ -76,7 +79,8 @@ const enableMemberBookingByEmail = computed(
   () => paymentConfigAtStore.value.enable_member_booking === '1',
 )
 
-const { paymentOptions, selectedPaymentType, currentScenario } = usePaymentStrategies(paymentConfig)
+const { paymentOptions, selectedPaymentType, PAYMENT_HINT_TEXTS } =
+  usePaymentStrategies(paymentConfig)
 
 const applyCoupon = ({ value, type }: { value: number; type: 'price' | 'point' }) => {
   if (type === 'point') {
@@ -91,7 +95,14 @@ const applyCoupon = ({ value, type }: { value: number; type: 'price' | 'point' }
 }
 
 const togglePaymentOption = (
-  option: 'linepay' | 'jkopay' | 'cvs' | 'applepay' | 'point_enabled' | 'enable_member_booking',
+  option:
+    | 'linepay'
+    | 'jkopay'
+    | 'cvs'
+    | 'applepay'
+    | 'ipass_twqr'
+    | 'point_enabled'
+    | 'enable_member_booking',
 ) => {
   paymentConfigAtStore.value[option] = paymentConfigAtStore.value[option] === '0' ? '1' : '0'
 }
@@ -102,10 +113,10 @@ const setPaymentMode = (modeKey: '-1' | '0' | '1' | '2' | '3') => {
 
 // 信用卡表單資料
 const creditCardForm = ref({
-  cardNumber: { val: '', isError: false },
-  expiryYear: { val: '', isError: false },
-  expiryMonth: { val: '', isError: false },
-  cvv: { val: '', isError: false },
+  cardNumber: { val: '', isError: false, errMsg: '' },
+  expiryYear: { val: '', isError: false, errMsg: '' },
+  expiryMonth: { val: '', isError: false, errMsg: '' },
+  cvv: { val: '', isError: false, errMsg: '' },
 })
 
 const showCreditCardForm = computed(() => {
@@ -141,10 +152,16 @@ const showCreditCardForm = computed(() => {
       <p class="mx-2">使用價格: {{ usePrice }}</p>
       <p class="mx-2">有可用金流: {{ hasPayment }}</p>
       <p class="mx-2">是否開啟會員 Email 預約: {{ enableMemberBookingByEmail }}</p>
-      <p class="mx-2">當前情境：{{ currentScenario }}</p>
       <p class="mx-2">當前選擇: {{ selectedPaymentType }}</p>
       <p class="mx-2">目前價格: {{ paymentConfig.price }} 元</p>
-      <p class="mx-2">目前點數: {{ paymentConfig.point }} 點</p>
+
+      <!-- Payment Hint Texts -->
+      <div v-if="PAYMENT_HINT_TEXTS.length > 0" class="w-full px-4">
+        <h3 class="text-sm font-semibold">付款提示：</h3>
+        <ul class="list-disc pl-6 text-sm text-gray-600">
+          <li v-for="(hint, index) in PAYMENT_HINT_TEXTS" :key="index">{{ hint }}</li>
+        </ul>
+      </div>
 
       <div class="flex w-full justify-center space-x-2">
         <button
@@ -307,6 +324,18 @@ const showCreditCardForm = computed(() => {
           <button
             :class="[
               'rounded border p-2 transition-colors',
+              paymentConfigAtStore.ipass_twqr === '1'
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'border-gray-300 hover:bg-slate-600 hover:text-white',
+            ]"
+            @click="togglePaymentOption('ipass_twqr')"
+          >
+            iPASS TWQR: {{ paymentConfigAtStore.ipass_twqr === '1' ? '開啟' : '關閉' }}
+          </button>
+
+          <button
+            :class="[
+              'rounded border p-2 transition-colors',
               paymentConfigAtStore.point_enabled === '1'
                 ? 'bg-green-500 text-white hover:bg-green-600'
                 : 'border-gray-300 hover:bg-slate-600 hover:text-white',
@@ -334,7 +363,12 @@ const showCreditCardForm = computed(() => {
       <div v-if="showCreditCardForm" class="mt-6 w-full">
         <h2 class="text-md mb-4 text-center font-semibold">信用卡資訊 Credit Card Information</h2>
 
-        <CreditCardInfo v-model="creditCardForm" />
+        <CreditCardInfo
+          v-model:card-number="creditCardForm.cardNumber"
+          v-model:expiry-month="creditCardForm.expiryMonth"
+          v-model:expiry-year="creditCardForm.expiryYear"
+          v-model:cvv="creditCardForm.cvv"
+        />
 
         <div class="mt-4 flex flex-wrap justify-center space-x-4 rounded bg-gray-50 p-3 text-xs">
           <p><strong>卡號:</strong> {{ creditCardForm.cardNumber.val }}</p>

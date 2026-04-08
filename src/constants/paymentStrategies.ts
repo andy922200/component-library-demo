@@ -10,43 +10,45 @@ export enum PaymentMode {
 }
 export type TPaymentMode = `${PaymentMode}`
 
-export const paymentModeMap = {
+export const paymentModeMap: Record<string, PaymentMode> = {
   '-1': PaymentMode.NO_PAYMENT,
-  0: PaymentMode.TAP_PAY_ZHI,
-  1: PaymentMode.TAP_PAY,
-  2: PaymentMode.ECPAY,
-  3: PaymentMode.NEWEBPAY,
+  '0': PaymentMode.TAP_PAY_ZHI,
+  '1': PaymentMode.TAP_PAY,
+  '2': PaymentMode.ECPAY,
+  '3': PaymentMode.NEWEBPAY,
 }
 
 export const checkHasPaymentMode = (mode: TPaymentMode) => mode !== PaymentMode.NO_PAYMENT
 
-/* 付款情境 */
-export enum PaymentScenario {
-  FREE_OR_COUPON = 'free_or_coupon',
-  MONEY_ONLY = 'money_only',
-  POINT_ONLY = 'point_only',
-  MONEY_AND_POINT = 'money_and_point',
+// 付款策略
+export enum PaymentStrategyValue {
+  CREDIT_CARD = 'credit-card',
+  TRANSFER = 'transfer',
+  LINEPAY = 'line-pay',
+  JKOPAY = 'jko-pay',
+  CVS = 'cvs',
+  APPLEPAY = 'apple-pay',
+  POINT = 'point',
+  COUPON = 'coupon',
+  FREE = 'free',
+  MEMBER_BOOKING_BY_EMAIL = 'member-booking-by-email',
+  IPASS_TWQR = 'ipass-twqr',
 }
-
-export const PaymentScenarioMap = {
-  '-1': PaymentScenario.FREE_OR_COUPON,
-  0: PaymentScenario.MONEY_ONLY,
-  1: PaymentScenario.POINT_ONLY /** 點數付款一定要有 eilis 會員資料 */,
-  2: PaymentScenario.MONEY_AND_POINT,
-}
+export type TPaymentStrategyValue = `${PaymentStrategyValue}`
 
 /* 根據後台回傳值，檢查是否啟用 & 是否顯示選項 */
 /**
  * 銀行轉帳
  */
-interface ITransfer {
+export interface ITransfer {
   accept: '0' | '1' | '2' /** 0: 無, 1: 有, 2: 忽略付款期限 */
   hour: string
   startTime: string
   endTime: string
 }
 
-export const isTransferActive = (transfer: ITransfer) => transfer.accept !== '0'
+export const isTransferActive = (transfer?: ITransfer) => transfer?.accept !== '0'
+
 const getLimitDayObj = (now: dayjs.Dayjs, transferStart: string, transferEnd: string) => {
   const dateText = now.format('YYYY/MM/DD')
   const nextDateText = now.add(1, 'day').format('YYYY/MM/DD')
@@ -64,21 +66,23 @@ const getLimitDayObj = (now: dayjs.Dayjs, transferStart: string, transferEnd: st
     limitEnd: dayjs(`${dateText} ${transferEnd}`),
   }
 }
+
 export const canUseTransfer = ({
   transfer,
   bookStartTime,
   isBookingRightNow,
   price,
 }: {
-  transfer: ITransfer
-  bookStartTime: string
+  transfer?: ITransfer
+  bookStartTime: string | dayjs.Dayjs
   isBookingRightNow: boolean
   price: number
 }) => {
-  const { accept, hour, startTime, endTime } = transfer ?? {}
+  if (!transfer) return { state: false, errMsg: '轉帳資訊缺失' }
+  const { accept, hour, startTime, endTime } = transfer
   const isAcceptTransfer = isTransferActive(transfer)
   const ignoreTransferDeadline = accept !== '1'
-  const transferLimitHour = +hour || 0
+  const transferLimitHour = +(hour || 0)
   const transferStart = startTime || '00:00'
   const transferEnd = endTime || '24:00'
   const bookStartTimeObj = dayjs(bookStartTime)
@@ -88,7 +92,7 @@ export const canUseTransfer = ({
   const isSameOrLessThenTransferLimitHour =
     isAcceptTransfer &&
     !ignoreTransferDeadline &&
-    bookStartTimeObj.diff(now, 'minute') <= +transferLimitHour * 60
+    bookStartTimeObj.diff(now, 'minute') <= transferLimitHour * 60
 
   const { limitStart, limitEnd } = getLimitDayObj(now, transferStart, transferEnd)
   const isBetweenTransferTime = now.isBetween(limitStart, limitEnd, 'minute', '[)')
@@ -113,15 +117,21 @@ export const canUseTransfer = ({
 }
 
 /**
+ * 優惠代碼付款
+ */
+export const isCouponPayActive = (mode: TPaymentMode) => !checkHasPaymentMode(mode)
+
+/**
  * 信用卡付款
  */
 export const isCreditCardActive = checkHasPaymentMode
+export const canUseCreditCardPaymentDurationDays = 210
 export const canUseCreditCard = ({
   orderDate,
   payment,
   price,
 }: {
-  orderDate: string
+  orderDate: string | dayjs.Dayjs
   payment: TPaymentMode
   price: number
 }) => {
@@ -165,7 +175,7 @@ export const canUseLinePay = ({
   linepay: '0' | '1'
   price: number
   cycleTimes: number
-  orderDate: string
+  orderDate: string | dayjs.Dayjs
 }) => {
   const isActive = isLinePayActive(linepay)
   const isPriceOver10000 = price > 10000
@@ -200,7 +210,6 @@ export const canUseLinePay = ({
 /**
  * JKoPay
  */
-export const canUseCreditCardPaymentDurationDays = 210
 export const isJkoPayActive = (jkopay: '0' | '1') => jkopay === '1'
 export const canUseJkoPay = ({
   jkopay,
@@ -208,7 +217,7 @@ export const canUseJkoPay = ({
   price,
 }: {
   jkopay: '0' | '1'
-  orderDate: string
+  orderDate: string | dayjs.Dayjs
   price: number
 }) => {
   const isActive = isJkoPayActive(jkopay)
@@ -316,6 +325,51 @@ export const canUsePointPay = (
 }
 
 /**
+ * iPASS MONEY / TWQR
+ */
+export const isIPassTWQRActive = (ipassTWQR: '0' | '1') => ipassTWQR === '1'
+export const canUseIPassTWQR = ({
+  ipassTWQR,
+  price,
+  cycleTimes,
+  orderDate,
+}: {
+  ipassTWQR: '0' | '1'
+  price: number
+  cycleTimes: number
+  orderDate: string | dayjs.Dayjs
+}) => {
+  const isActive = isIPassTWQRActive(ipassTWQR)
+  const isPriceOver10000 = price > 10000
+  const isFree = price <= 0
+  const isNotCycle = (cycleTimes || 0) <= 1
+  const todayObj = dayjs()
+  const isOrderInMonth = dayjs(orderDate).isBetween(todayObj, todayObj.add(1, 'month'), 'day', '[]')
+  const errMsgArr = []
+
+  if (!isActive) {
+    errMsgArr.push('iPASS TWQR is not active.')
+  }
+
+  if (isPriceOver10000) {
+    errMsgArr.push('iPASS TWQR is only available for orders under 10000.')
+  }
+
+  if (!isNotCycle) {
+    errMsgArr.push('iPASS TWQR is not available for recurring payments.')
+  }
+
+  if (!isOrderInMonth) {
+    errMsgArr.push('iPASS TWQR is only available for orders within the current month.')
+  }
+
+  return {
+    state: isActive && !isFree && !isPriceOver10000 && isNotCycle && isOrderInMonth,
+    errMsg: errMsgArr.join('\n'),
+  }
+}
+
+/**
  * Email會員代碼付款
  */
 export const isMemberBookingByEmailActive = (enabled: '0' | '1') => enabled === '1'
@@ -331,40 +385,4 @@ export const canUseMemberBookingByEmail = (value: '0' | '1') => {
     state: isActive,
     errMsg: errMsgArr.join('\n'),
   }
-}
-
-export interface IPaymentStrategy {
-  // General
-  payment: TPaymentMode
-  orderDate: string
-  price: number
-  point: number | undefined
-  isBookingRightNow: boolean
-  bookStartTime: string
-  cycleTimes: number
-  // Transfer
-  transfer: ITransfer
-  // Third-party
-  linepay: '0' | '1'
-  jkopay: '0' | '1'
-  cvs: '0' | '1'
-  applepay: '0' | '1'
-  // Point
-  pointEnabled: '0' | '1'
-  hasPointMemberData: '0' | '1'
-  // Member-Booking-By-Email
-  enableMemberBookingByEmail: '0' | '1'
-}
-
-export enum PaymentStrategyValue {
-  CREDIT_CARD = 'CREDIT_CARD',
-  TRANSFER = 'TRANSFER',
-  LINEPAY = 'LINEPAY',
-  JKOPAY = 'JKOPAY',
-  CVS = 'CVS',
-  APPLEPAY = 'APPLEPAY',
-  POINT = 'POINT',
-  COUPON = 'COUPON',
-  FREE = 'FREE',
-  MEMBER_BOOKING_BY_EMAIL = 'MEMBER_BOOKING_BY_EMAIL',
 }

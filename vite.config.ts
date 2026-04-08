@@ -42,7 +42,6 @@ export default defineConfig({
     setupFiles: './src/tests/vitest/setup.ts',
     include: ['./src/tests/vitest/**/*.(spec|test).ts'],
     coverage: {
-      all: false,
       enabled: true,
       reporter: ['text', 'json', 'html'],
     },

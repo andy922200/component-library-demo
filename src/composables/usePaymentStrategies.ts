@@ -1,247 +1,381 @@
-import type { Ref } from 'vue'
-import { computed, ref, watch } from 'vue'
+import type { MaybeRefOrGetter } from 'vue'
+import { computed, ref, toValue, watch } from 'vue'
 
-import type { IPaymentStrategy } from '@/constants/paymentStrategies'
+import type { ITransfer, TPaymentMode } from '@/constants/paymentStrategies'
 import {
   canUseApplePay,
   canUseCreditCard,
   canUseCvsPay,
+  canUseIPassTWQR,
   canUseJkoPay,
   canUseLinePay,
+  canUseMemberBookingByEmail,
   canUsePointPay,
   canUseTransfer,
-  checkHasPaymentMode,
-  isApplePayActive,
-  isCreditCardActive,
-  isCvsActive,
-  isJkoPayActive,
-  isLinePayActive,
-  isMemberBookingByEmailActive,
-  isPointPayActive,
-  isTransferActive,
+  isCouponPayActive,
   PaymentMode,
-  PaymentScenario,
   PaymentStrategyValue,
 } from '@/constants/paymentStrategies'
+import dayjs from '@/plugins/dayjs'
 
-export const getPaymentScenario = ({
-  price,
-  payment,
-  linepay,
-  jkopay,
-  cvs,
-  applepay,
-  pointEnabled,
-  enableMemberBookingByEmail,
-}: IPaymentStrategy) => {
-  const hasMoneyScenario =
-    payment !== PaymentMode.NO_PAYMENT ||
-    isLinePayActive(linepay) ||
-    isJkoPayActive(jkopay) ||
-    isCvsActive(cvs) ||
-    isApplePayActive(applepay)
-  const hasPointScenario = isPointPayActive(pointEnabled)
-  const isFree = price === 0
-
-  if (isMemberBookingByEmailActive(enableMemberBookingByEmail))
-    return PaymentScenario.FREE_OR_COUPON
-  if (isFree) return PaymentScenario.FREE_OR_COUPON
-  if (hasMoneyScenario && hasPointScenario) return PaymentScenario.MONEY_AND_POINT
-  if (hasPointScenario) return PaymentScenario.POINT_ONLY
-  if (hasMoneyScenario) return PaymentScenario.MONEY_ONLY
-
-  return PaymentScenario.FREE_OR_COUPON
+export type PaymentConfig = {
+  price: number
+  bookingCoreItems?: { slots: { startDatetime: string }[] }[]
+  paymentMode?: string
+  isAcceptTransfer: boolean
+  ignoreTransferDeadline: boolean
+  transferStart: string
+  transferEnd: string
+  transferLimitHour: number
+  enableMemberBookingByEmail: boolean
+  memberBookingByEmailVisitorMode?: boolean
+  usePoint: boolean
+  hasMember: boolean
+  hasLinePay: boolean
+  hasJkoPay: boolean
+  hasCvsCodePay: boolean
+  hasApplePay: boolean
+  hasIPassTWQR: boolean
+  cycleTimes: number
+  allowedPaymentMethods?: string[]
 }
 
-export const paymentStrategies = [
-  {
-    text: '請選擇付款方式 Please Select',
-    value: '',
-    isAvailable: () => true,
-    isDisabled: () => true,
-  },
-  {
-    text: '信用卡付款 Credit Card',
-    value: PaymentStrategyValue.CREDIT_CARD,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
-      return isCreditCardActive(config.payment)
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { orderDate, payment, price } = config
-      const hasPaymentMode = checkHasPaymentMode(payment)
-      return !canUseCreditCard({ orderDate, payment, price }).state || !hasPaymentMode
-    },
-  },
-  {
-    text: '銀行轉帳 Transfer',
-    value: PaymentStrategyValue.TRANSFER,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
-      return isTransferActive(config.transfer) && !isPointPayActive(config.pointEnabled)
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { transfer, bookStartTime, isBookingRightNow, enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+// 策略介面
+export interface PaymentStrategy {
+  id: PaymentStrategyValue
+  evaluate: (
+    config: PaymentConfig,
+    bookingTimes: ReturnType<typeof getAllBookingStartTime>,
+  ) => { text: string; value: string; disabled: boolean } | null
+}
 
-      return !canUseTransfer({ transfer, bookStartTime, isBookingRightNow, price: config.price })
-        .state
-    },
-  },
-  {
-    text: 'LINE Pay',
-    value: PaymentStrategyValue.LINEPAY,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { payment, enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+const getAllBookingStartTime = (config: PaymentConfig) =>
+  config.bookingCoreItems?.map((i) => ({ dayObj: dayjs(i.slots[0]?.startDatetime) })) ?? []
 
-      const hasPaymentMode = checkHasPaymentMode(payment)
-      return isLinePayActive(config.linepay) && hasPaymentMode
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { linepay, price, cycleTimes, orderDate } = config
-      return !canUseLinePay({ linepay, price, cycleTimes, orderDate }).state
-    },
+// --- 具體策略實作 ---
+export const pointStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.POINT,
+  evaluate(config) {
+    const { state } = canUsePointPay(config.usePoint ? '1' : '0', config.hasMember, config.price)
+    if (config.usePoint && state) {
+      return { text: '點數付款 Point', value: PaymentStrategyValue.POINT, disabled: false }
+    }
+    return null
   },
-  {
-    text: '街口支付 JKOPAY',
-    value: PaymentStrategyValue.JKOPAY,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { payment, enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+}
 
-      const hasPaymentMode = checkHasPaymentMode(payment)
-      return isJkoPayActive(config.jkopay) && hasPaymentMode
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { jkopay, orderDate } = config
-      return !canUseJkoPay({ jkopay, orderDate, price: config.price }).state
-    },
+export const memberBookingByEmailStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.MEMBER_BOOKING_BY_EMAIL,
+  evaluate(config) {
+    const { state } = canUseMemberBookingByEmail(config.enableMemberBookingByEmail ? '1' : '0')
+    if (!state || config.memberBookingByEmailVisitorMode) return null
+    return {
+      text: '會員代碼付款 Member',
+      value: PaymentStrategyValue.MEMBER_BOOKING_BY_EMAIL,
+      disabled: false,
+    }
   },
-  {
-    text: '超商代碼付款 CVS',
-    value: PaymentStrategyValue.CVS,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { payment, enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+}
 
-      const hasPaymentMode = checkHasPaymentMode(payment)
-      return isCvsActive(config.cvs) && hasPaymentMode
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { cvs, price, isBookingRightNow } = config
-      return !canUseCvsPay({ cvs, price, isBookingRightNow }).state
-    },
+export const couponStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.COUPON,
+  evaluate(config) {
+    const paymentMode = (config.paymentMode ?? PaymentMode.NO_PAYMENT) as TPaymentMode
+    const isActive = isCouponPayActive(paymentMode) || config.memberBookingByEmailVisitorMode
+    if (!isActive) return null
+    return { text: '優惠代碼付款 Coupon', value: PaymentStrategyValue.COUPON, disabled: false }
   },
-  {
-    text: 'Apple Pay',
-    value: 'APPLEPAY',
-    isAvailable: (config: IPaymentStrategy) => {
-      const { payment, applepay, enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+}
 
-      const hasPaymentMode = checkHasPaymentMode(payment)
-      return isApplePayActive(applepay) && hasPaymentMode
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { applepay } = config
-      return !canUseApplePay({ applepay, price: config.price }).state
-    },
-  },
-  {
-    text: '點數付款 Point',
-    value: PaymentStrategyValue.POINT,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { pointEnabled, payment, enableMemberBookingByEmail } = config
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+export const creditCardStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.CREDIT_CARD,
+  evaluate(config, bookingTimes) {
+    if (config.paymentMode === PaymentMode.NO_PAYMENT) return null
+    const paymentMode = config.paymentMode ?? PaymentMode.NO_PAYMENT
+    const maxDateStr =
+      bookingTimes.length > 0 ? (bookingTimes[0]?.dayObj.format() ?? '') : dayjs().format()
 
-      return isPointPayActive(pointEnabled) && !checkHasPaymentMode(payment)
-    },
-    isDisabled: (config: IPaymentStrategy) => {
-      const { pointEnabled, hasPointMemberData } = config
-      return !canUsePointPay(pointEnabled, Boolean(+hasPointMemberData), config.point).state
-    },
-  },
-  {
-    text: '優惠代碼付款 Coupon',
-    value: PaymentStrategyValue.COUPON,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { price, pointEnabled, enableMemberBookingByEmail } = config
-      const isZeroPrice = price === 0
+    const { state } = canUseCreditCard({
+      orderDate: maxDateStr,
+      payment: paymentMode as TPaymentMode,
+      price: config.price || 0,
+    })
 
-      if (isMemberBookingByEmailActive(enableMemberBookingByEmail)) return false
+    return {
+      text: '信用卡付款 Credit Card',
+      value: paymentMode,
+      disabled: !state,
+    }
+  },
+}
 
-      return isZeroPrice && (!isPointPayActive(pointEnabled) || checkHasPaymentMode(config.payment))
-    },
-    isDisabled: () => false,
+export const linePayStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.LINEPAY,
+  evaluate(config, bookingTimes) {
+    if (!config.hasLinePay) return null
+    const maxDateStr =
+      bookingTimes.length > 0 ? (bookingTimes[0]?.dayObj.format() ?? '') : dayjs().format()
+
+    const { state } = canUseLinePay({
+      linepay: config.hasLinePay ? '1' : '0',
+      price: config.price || 0,
+      cycleTimes: config.cycleTimes,
+      orderDate: maxDateStr,
+    })
+
+    return { text: 'LINE Pay', value: PaymentStrategyValue.LINEPAY, disabled: !state }
   },
-  {
-    text: '會員代碼付款 Member',
-    value: PaymentStrategyValue.MEMBER_BOOKING_BY_EMAIL,
-    isAvailable: (config: IPaymentStrategy) => {
-      const { enableMemberBookingByEmail } = config
-      return isMemberBookingByEmailActive(enableMemberBookingByEmail)
-    },
-    isDisabled: () => false,
+}
+
+export const jkoPayStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.JKOPAY,
+  evaluate(config, bookingTimes) {
+    if (!config.hasJkoPay) return null
+    const maxDateStr =
+      bookingTimes.length > 0 ? (bookingTimes[0]?.dayObj.format() ?? '') : dayjs().format()
+
+    const { state } = canUseJkoPay({
+      jkopay: config.hasJkoPay ? '1' : '0',
+      price: config.price || 0,
+      orderDate: maxDateStr,
+    })
+
+    return { text: '街口支付 JKOPAY', value: PaymentStrategyValue.JKOPAY, disabled: !state }
   },
+}
+
+export const applePayStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.APPLEPAY,
+  evaluate(config) {
+    if (!config.hasApplePay) return null
+    const { state } = canUseApplePay({
+      applepay: config.hasApplePay ? '1' : '0',
+      price: config.price || 0,
+    })
+    return { text: 'Apple Pay', value: PaymentStrategyValue.APPLEPAY, disabled: !state }
+  },
+}
+
+export const transferStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.TRANSFER,
+  evaluate(config, bookingTimes) {
+    if (!config.isAcceptTransfer) return null
+
+    const transferConfig: ITransfer = {
+      accept: config.ignoreTransferDeadline ? '2' : '1',
+      hour: String(config.transferLimitHour || 0),
+      startTime: config.transferStart,
+      endTime: config.transferEnd,
+    }
+
+    const maxDateStr =
+      bookingTimes.length > 0 ? (bookingTimes[0]?.dayObj.format() ?? '') : dayjs().format()
+
+    const isBookingRightNow = bookingTimes.some((i) => {
+      const bookingDateTime = i.dayObj
+      return bookingDateTime.isSameOrBefore(dayjs(), 'minute')
+    })
+
+    const { state } = canUseTransfer({
+      transfer: transferConfig,
+      bookStartTime: maxDateStr,
+      isBookingRightNow: !!isBookingRightNow,
+      price: config.price || 0,
+    })
+
+    return { text: '銀行轉帳 Transfer', value: PaymentStrategyValue.TRANSFER, disabled: !state }
+  },
+}
+
+export const iPassTWQRStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.IPASS_TWQR,
+  evaluate(config, bookingTimes) {
+    if (!config.hasIPassTWQR) return null
+    const maxDateStr =
+      bookingTimes.length > 0 ? (bookingTimes[0]?.dayObj.format() ?? '') : dayjs().format()
+
+    const { state } = canUseIPassTWQR({
+      ipassTWQR: config.hasIPassTWQR ? '1' : '0',
+      price: config.price || 0,
+      cycleTimes: config.cycleTimes,
+      orderDate: maxDateStr,
+    })
+
+    return {
+      text: 'iPASS MONEY / TWQR',
+      value: PaymentStrategyValue.IPASS_TWQR,
+      disabled: !state,
+    }
+  },
+}
+
+export const cvsStrategy: PaymentStrategy = {
+  id: PaymentStrategyValue.CVS,
+  evaluate(config, bookingTimes) {
+    if (!config.hasCvsCodePay) return null
+
+    const isBookingRightNow = bookingTimes.some((i) => {
+      const bookingDateTime = i.dayObj
+      return bookingDateTime.isSameOrBefore(dayjs(), 'minute')
+    })
+
+    const { state } = canUseCvsPay({
+      cvs: config.hasCvsCodePay ? '1' : '0',
+      price: config.price || 0,
+      isBookingRightNow: !!isBookingRightNow,
+    })
+
+    return {
+      text: '超商代碼付款 CVS',
+      value: PaymentStrategyValue.CVS,
+      disabled: !state,
+    }
+  },
+}
+
+const strategies: PaymentStrategy[] = [
+  pointStrategy,
+  memberBookingByEmailStrategy,
+  couponStrategy,
+  creditCardStrategy,
+  linePayStrategy,
+  jkoPayStrategy,
+  transferStrategy,
+  cvsStrategy,
+  applePayStrategy,
+  iPassTWQRStrategy,
 ]
 
-/**
- * @description 一個響應式的 Composable，用來根據動態的設定計算可用的付款選項。
- * @description - 當金流和點數付款二者皆啟用時，僅顯示金流
- * @param {Ref<IPaymentStrategy>} config - 一個包含所有計算所需參數的 ref 或 computed 物件。
- * @returns {{
- * paymentOptions: ComputedRef<Array<{text: string, value: string, disabled: boolean}>>,
- * selectedPaymentType: Ref<string>
- * }}
- */
-export function usePaymentStrategies(config: Ref<IPaymentStrategy>) {
+export const usePaymentStrategies = (paymentConfig: MaybeRefOrGetter<PaymentConfig>) => {
   const selectedPaymentType = ref<string>('')
-  const currentScenario = computed(() => getPaymentScenario(config.value))
 
   const paymentOptions = computed(() => {
-    return paymentStrategies
-      .filter((strategy) => strategy.isAvailable(config.value))
-      .map((strategy) => {
-        const value =
-          strategy.value === PaymentStrategyValue.CREDIT_CARD
-            ? config.value.payment // 如果是信用卡，動態給予後端對應的金流字串
-            : strategy.value
+    const config = toValue(paymentConfig)
 
-        return {
-          text: strategy.text,
-          value,
-          disabled: strategy.isDisabled(config.value),
-        }
+    const filterByAllowed = (options: { text: string; value: string; disabled: boolean }[]) => {
+      if (!config.allowedPaymentMethods?.length) return options
+      return options.filter((o) => config.allowedPaymentMethods!.includes(o.value))
+    }
+
+    // 若可使用點數付款，直接回傳點數付款選項
+    if (config.usePoint) {
+      const pointResult = pointStrategy.evaluate(config, [])
+      return filterByAllowed(pointResult ? [pointResult] : [])
+    }
+
+    // 若可使用會員代碼付款，直接回傳會員代碼付款選項
+    if (config.enableMemberBookingByEmail) {
+      const memberResult = memberBookingByEmailStrategy.evaluate(config, [])
+      return filterByAllowed(memberResult ? [memberResult] : [])
+    }
+
+    const bookingTimes = getAllBookingStartTime(config)
+
+    // 排除已在上方處理的特殊策略，使用 flatMap 簡化邏輯
+    const options = strategies
+      .filter(
+        (strategy) =>
+          ![PaymentStrategyValue.POINT, PaymentStrategyValue.MEMBER_BOOKING_BY_EMAIL].includes(
+            strategy.id,
+          ),
+      )
+      .flatMap((strategy) => {
+        const res = strategy.evaluate(config, bookingTimes)
+        return res ? [res] : []
       })
+
+    return filterByAllowed(options)
+  })
+
+  const PAYMENT_HINT_TEXTS = computed(() => {
+    const config = toValue(paymentConfig)
+    const availableValues = new Set(paymentOptions.value.map((o) => o.value))
+    const hasOption = (value: string) => availableValues.has(value)
+
+    // 定義提示規則：陣列順序 = 顯示順序
+    const hintRules = [
+      {
+        condition: () => selectedPaymentType.value === PaymentStrategyValue.COUPON,
+        getText: () => '僅限使用優惠代碼付款',
+      },
+      {
+        condition: () =>
+          hasOption(PaymentStrategyValue.TRANSFER) &&
+          selectedPaymentType.value === PaymentStrategyValue.TRANSFER &&
+          !config.ignoreTransferDeadline,
+        getText: () =>
+          `提醒：預約時間開始前 ${config.transferLimitHour} 小時不支援轉帳付款，逾期將自動取消訂單`,
+      },
+      {
+        condition: () =>
+          hasOption(PaymentStrategyValue.TRANSFER) &&
+          selectedPaymentType.value === PaymentStrategyValue.TRANSFER &&
+          config.ignoreTransferDeadline,
+        getText: () => '提醒：請於活動開始前完成轉帳，逾期將自動取消訂單',
+      },
+      {
+        condition: () =>
+          hasOption(PaymentMode.ECPAY) && selectedPaymentType.value === PaymentMode.ECPAY,
+        getText: () => '將跳轉至綠界金流頁面進行付款',
+      },
+      {
+        condition: () =>
+          hasOption(PaymentStrategyValue.TRANSFER) && !config.usePoint && config.isAcceptTransfer,
+        getText: () => `預約時間開始前 ${config.transferLimitHour} 小時不適用銀行轉帳付款`,
+      },
+      {
+        condition: () => hasOption(PaymentStrategyValue.TRANSFER) && config.isAcceptTransfer,
+        getText: () => {
+          const transferStart = config.transferStart
+          const transferEnd = config.transferEnd
+          const dateText = dayjs().format('YYYY/MM/DD')
+          const isEndNextDay = dayjs(`${dateText} ${transferEnd}`).isBefore(
+            dayjs(`${dateText} ${transferStart}`),
+          )
+
+          return `銀行轉帳開放時間為 ${transferStart} 至 ${transferEnd}${isEndNextDay ? '(隔日)' : ''}`
+        },
+      },
+      {
+        condition: () =>
+          hasOption(PaymentStrategyValue.TRANSFER) || hasOption(PaymentStrategyValue.COUPON),
+        getText: () => '超過信用卡可刷卡天數限制時，僅提供銀行轉帳或優惠代碼付款',
+      },
+      {
+        condition: () => hasOption(PaymentStrategyValue.LINEPAY),
+        getText: () => 'LINE Pay 單筆上限 10,000 元，且不適用於週期性付款',
+      },
+      {
+        condition: () => hasOption(PaymentStrategyValue.IPASS_TWQR),
+        getText: () => 'iPASS MONEY / TWQR 單筆上限 10,000 元，且不適用於週期性付款',
+      },
+      {
+        condition: () => hasOption(PaymentStrategyValue.CVS),
+        getText: () => '超商代碼付款不適用於即時預約',
+      },
+    ]
+
+    return hintRules.filter((rule) => rule.condition()).map((rule) => rule.getText())
   })
 
   watch(
-    paymentOptions,
+    () => paymentOptions.value,
     (newOptions) => {
-      const validOptions = newOptions.filter((opt) => !opt.disabled)
-
-      if (validOptions.length === 0) {
-        selectedPaymentType.value = ''
-        return
-      }
-
-      const currentSelectionIsValid = validOptions.some(
-        (opt) => opt.value === selectedPaymentType.value,
-      )
-
-      if (!currentSelectionIsValid) {
-        selectedPaymentType.value = validOptions[0].value ?? ''
+      const validOptions = newOptions.filter((o) => !o.disabled)
+      if (
+        validOptions.length > 0 &&
+        (!selectedPaymentType.value ||
+          !newOptions.find((o) => o.value === selectedPaymentType.value && !o.disabled))
+      ) {
+        selectedPaymentType.value = validOptions[0]?.value ?? ''
       }
     },
-    { immediate: true, deep: true },
+    { immediate: true },
   )
 
   return {
     paymentOptions,
     selectedPaymentType,
-    currentScenario,
+    PAYMENT_HINT_TEXTS,
   }
 }
